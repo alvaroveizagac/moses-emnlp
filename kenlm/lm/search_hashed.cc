@@ -97,6 +97,7 @@ AwfulGlobal awful;
 
 void SetRest(const WordIndex *vocab_ids, unsigned int n, detail::Additional &weights) {
   weights.rest = awful.GetRest(vocab_ids, n);
+  std::cout << n << ' ' << -fabsf(weights.prob) << ' ' << weights.rest << '\n';
 }
 
 void SetRest(const WordIndex *, unsigned int, ProbBackoff &) {}
