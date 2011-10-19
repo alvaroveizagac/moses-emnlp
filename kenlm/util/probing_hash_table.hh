@@ -31,6 +31,7 @@ template <class PackingT, class HashT, class EqualT = std::equal_to<typename Pac
   public:
     typedef PackingT Packing;
     typedef typename Packing::Key Key;
+    typedef typename Packing::Value Value;
     typedef typename Packing::MutableIterator MutableIterator;
     typedef typename Packing::ConstIterator ConstIterator;
 

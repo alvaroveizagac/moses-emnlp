@@ -27,49 +27,48 @@ inline uint64_t CombineWordHash(uint64_t current, const WordIndex next) {
   return ret;
 }
 
-struct HashedSearch {
-  typedef uint64_t Node;
-
-  class Unigram {
-    public:
-      Unigram() {}
-
-      Unigram(void *start, std::size_t /*allocated*/) : unigram_(static_cast<ProbBackoff*>(start)) {}
-
-      static std::size_t Size(uint64_t count) {
-        return (count + 1) * sizeof(ProbBackoff); // +1 for hallucinate <unk>
-      }
-
-      const ProbBackoff &Lookup(WordIndex index) const { return unigram_[index]; }
-
-      ProbBackoff &Unknown() { return unigram_[0]; }
-
-      void LoadedBinary() {}
-
-      // For building.
-      ProbBackoff *Raw() { return unigram_; }
-
-    private:
-      ProbBackoff *unigram_;
-  };
-
-  Unigram unigram;
-
-  void LookupUnigram(WordIndex word, float &backoff, Node &next, FullScoreReturn &ret) const {
-    const ProbBackoff &entry = unigram.Lookup(word);
-    util::FloatEnc val;
-    val.f = entry.prob;
-    ret.independent_left = (val.i & util::kSignBit);
-    ret.extend_left = static_cast<uint64_t>(word);
-    val.i |= util::kSignBit;
-    ret.prob = val.f;
-    backoff = entry.backoff;
-    next = static_cast<Node>(word);
-  }
-};
-
-template <class MiddleT, class LongestT> class TemplateHashedSearch : public HashedSearch {
+template <class MiddleT, class LongestT> class TemplateHashedSearch {
   public:
+    typedef uint64_t Node;
+    typedef typename MiddleT::Value LowerValue;
+
+    class Unigram {
+      public:
+        Unigram() {}
+
+        Unigram(void *start, std::size_t /*allocated*/) : unigram_(static_cast<LowerValue*>(start)) {}
+
+        static std::size_t Size(uint64_t count) {
+          return (count + 1) * sizeof(LowerValue); // +1 for hallucinate <unk>
+        }
+
+        const LowerValue &Lookup(WordIndex index) const { return unigram_[index]; }
+
+        LowerValue &Unknown() { return unigram_[0]; }
+
+        void LoadedBinary() {}
+
+        // For building.
+        LowerValue *Raw() { return unigram_; }
+
+      private:
+        LowerValue *unigram_;
+    };
+
+    Unigram unigram;
+
+    void LookupUnigram(WordIndex word, float &backoff, Node &next, FullScoreReturn &ret) const {
+      const LowerValue &entry = unigram.Lookup(word);
+      util::FloatEnc val;
+      val.f = entry.prob;
+      ret.independent_left = (val.i & util::kSignBit);
+      ret.extend_left = static_cast<uint64_t>(word);
+      val.i |= util::kSignBit;
+      ret.prob = val.f;
+      backoff = entry.backoff;
+      next = static_cast<Node>(word);
+    }
+
     typedef MiddleT Middle;
 
     typedef LongestT Longest;
@@ -170,6 +169,17 @@ struct ProbingHashedSearch : public TemplateHashedSearch<
   util::ProbingHashTable<util::ByteAlignedPacking<uint64_t, Prob>, IdentityHash> > {
 
   static const ModelType kModelType = HASH_PROBING;
+};
+
+struct Additional : ProbBackoff {
+  float rest;
+};
+
+struct RestProbingHashedSearch : public TemplateHashedSearch<
+  util::ProbingHashTable<util::ByteAlignedPacking<uint64_t, Additional>, IdentityHash>,
+  util::ProbingHashTable<util::ByteAlignedPacking<uint64_t, Prob>, IdentityHash> > {
+
+  static const ModelType kModelType = HASH_REST;
 };
 
 } // namespace detail

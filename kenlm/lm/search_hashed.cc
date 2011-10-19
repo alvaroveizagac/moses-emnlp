@@ -11,6 +11,8 @@
 
 #include <string>
 
+#include <math.h>
+
 namespace lm {
 namespace ngram {
 
@@ -37,9 +39,9 @@ template <class Middle> class ActivateLowerMiddle {
     Middle &modify_;
 };
 
-class ActivateUnigram {
+template <class LowerValue> class ActivateUnigram {
   public:
-    explicit ActivateUnigram(ProbBackoff *unigram) : modify_(unigram) {}
+    explicit ActivateUnigram(LowerValue *unigram) : modify_(unigram) {}
 
     void operator()(const WordIndex *vocab_ids, const unsigned int /*n*/) {
       // assert(n == 2);
@@ -47,15 +49,26 @@ class ActivateUnigram {
     }
 
   private:
-    ProbBackoff *modify_;
+    LowerValue *modify_;
 };
 
-template <class Middle> void FixSRI(int lower, float negative_lower_prob, unsigned int n, const uint64_t *keys, const WordIndex *vocab_ids, ProbBackoff *unigrams, std::vector<Middle> &middle) {
-  ProbBackoff blank;
-  blank.backoff = kNoExtensionBackoff;
-  // Fix SRI's stupidity. 
+void InitializeBlank(float prob, detail::Additional &add) {
+  add.prob = prob;
+  add.backoff = kNoExtensionBackoff;
+  // To be written.  
+  add.rest = NAN;
+}
+
+void InitializeBlank(float prob, ProbBackoff &out) {
+  out.prob = prob;
+  out.backoff = kNoExtensionBackoff;
+}
+
+// Fix SRI's stupidity wrt omitting B C D even though A B C D appears.  
+template <class Middle> void FixSRI(int lower, float negative_lower_prob, unsigned int n, const uint64_t *keys, const WordIndex *vocab_ids, typename Middle::Value *unigrams, std::vector<Middle> &middle) {
+  typename Middle::Value blank;
   // Note that negative_lower_prob is the negative of the probability (so it's currently >= 0).  We still want the sign bit off to indicate left extension, so I just do -= on the backoffs.  
-  blank.prob = negative_lower_prob;
+  InitializeBlank(negative_lower_prob, blank);
   // An entry was found at lower (order lower + 2).  
   // We need to insert blanks starting at lower + 1 (order lower + 3).
   unsigned int fix = static_cast<unsigned int>(lower + 1);
@@ -83,7 +96,7 @@ template <class Middle> void FixSRI(int lower, float negative_lower_prob, unsign
   }
 }
 
-template <class Voc, class Store, class Middle, class Activate> void ReadNGrams(util::FilePiece &f, const unsigned int n, const size_t count, const Voc &vocab, ProbBackoff *unigrams, std::vector<Middle> &middle, Activate activate, Store &store, PositiveProbWarn &warn) {
+template <class Voc, class Store, class Middle, class Activate> void ReadNGrams(util::FilePiece &f, const unsigned int n, const size_t count, const Voc &vocab, typename Middle::Value *unigrams, std::vector<Middle> &middle, Activate activate, Store &store, PositiveProbWarn &warn) {
   ReadNGramHeader(f, n);
 
   // vocab ids of words in reverse order
@@ -156,7 +169,7 @@ template <class MiddleT, class LongestT> template <class Voc> void TemplateHashe
 
   try {
     if (counts.size() > 2) {
-      ReadNGrams(f, 2, counts[1], vocab, unigram.Raw(), middle_, ActivateUnigram(unigram.Raw()), middle_[0], warn);
+      ReadNGrams(f, 2, counts[1], vocab, unigram.Raw(), middle_, ActivateUnigram<LowerValue>(unigram.Raw()), middle_[0], warn);
     }
     for (unsigned int n = 3; n < counts.size(); ++n) {
       ReadNGrams(f, n, counts[n-1], vocab, unigram.Raw(), middle_, ActivateLowerMiddle<Middle>(middle_[n-3]), middle_[n-2], warn);
@@ -164,7 +177,7 @@ template <class MiddleT, class LongestT> template <class Voc> void TemplateHashe
     if (counts.size() > 2) {
       ReadNGrams(f, counts.size(), counts[counts.size() - 1], vocab, unigram.Raw(), middle_, ActivateLowerMiddle<Middle>(middle_.back()), longest, warn);
     } else {
-      ReadNGrams(f, counts.size(), counts[counts.size() - 1], vocab, unigram.Raw(), middle_, ActivateUnigram(unigram.Raw()), longest, warn);
+      ReadNGrams(f, counts.size(), counts[counts.size() - 1], vocab, unigram.Raw(), middle_, ActivateUnigram<LowerValue>(unigram.Raw()), longest, warn);
     }
   } catch (util::ProbingSizeException &e) {
     UTIL_THROW(util::ProbingSizeException, "Avoid pruning n-grams like \"bar baz quux\" when \"foo bar baz quux\" is still in the model.  KenLM will work when this pruning happens, but the probing model assumes these events are rare enough that using blank space in the probing hash table will cover all of them.  Increase probing_multiplier (-p to build_binary) to add more blank spaces.\n");
@@ -183,6 +196,10 @@ template <class MiddleT, class LongestT> void TemplateHashedSearch<MiddleT, Long
 template class TemplateHashedSearch<ProbingHashedSearch::Middle, ProbingHashedSearch::Longest>;
 
 template void TemplateHashedSearch<ProbingHashedSearch::Middle, ProbingHashedSearch::Longest>::InitializeFromARPA(const char *, util::FilePiece &f, const std::vector<uint64_t> &counts, const Config &, ProbingVocabulary &vocab, Backing &backing);
+
+template class TemplateHashedSearch<RestProbingHashedSearch::Middle, RestProbingHashedSearch::Longest>;
+
+template void TemplateHashedSearch<RestProbingHashedSearch::Middle, RestProbingHashedSearch::Longest>::InitializeFromARPA(const char *, util::FilePiece &f, const std::vector<uint64_t> &counts, const Config &, ProbingVocabulary &vocab, Backing &backing);
 
 } // namespace detail
 } // namespace ngram
