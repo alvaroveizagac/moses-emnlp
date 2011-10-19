@@ -3,6 +3,8 @@
 #include "lm/binary_format.hh"
 #include "lm/blank.hh"
 #include "lm/lm_exception.hh"
+// TODO: remove hack
+#include "lm/model.hh"
 #include "lm/read_arpa.hh"
 #include "lm/vocab.hh"
 
@@ -52,23 +54,60 @@ template <class LowerValue> class ActivateUnigram {
     LowerValue *modify_;
 };
 
-void InitializeBlank(float prob, detail::Additional &add) {
-  add.prob = prob;
-  add.backoff = kNoExtensionBackoff;
-  // To be written.  
-  add.rest = NAN;
+class AwfulGlobal {
+  public:
+    AwfulGlobal() {
+      util::FilePiece uni("1");
+      ProbingVocabulary vocab;
+      std::vector<uint64_t> number;
+      ReadARPACounts(uni, number);
+      assert(number.size() == 1);
+      ReadNGramHeader(uni, 1);
+      unigram_.resize(number[0]);
+      PositiveProbWarn warn;
+      Read1Grams(uni, (size_t)number[0], vocab, &*unigram_.begin(), warn);
+
+      models_[0] = new ProbingModel("2");
+      models_[1] = new ProbingModel("3");
+      models_[2] = new ProbingModel("4");
+    }
+
+    ~AwfulGlobal() {
+      delete models_[0];
+      delete models_[1];
+      delete models_[2];
+    }
+
+    float GetRest(const WordIndex *vocab_ids, unsigned int n) {
+      if (n == 1) {
+        return unigram_[vocab_ids[0]].prob;
+      } else {
+        State ignored;
+        return models_[n - 2]->FullScoreForgotState(vocab_ids + 1, vocab_ids + n, vocab_ids[0], ignored).prob;
+      }
+    }
+
+  private:
+    std::vector<ProbBackoff> unigram_;
+    const ProbingModel *models_[3];
+};
+
+AwfulGlobal awful;
+
+void SetRest(const WordIndex *vocab_ids, unsigned int n, detail::Additional &weights) {
+  weights.rest = awful.GetRest(vocab_ids, n);
 }
 
-void InitializeBlank(float prob, ProbBackoff &out) {
-  out.prob = prob;
-  out.backoff = kNoExtensionBackoff;
-}
+void SetRest(const WordIndex *, unsigned int, ProbBackoff &) {}
+
+void SetRest(const WordIndex *, unsigned int, Prob &) {}
 
 // Fix SRI's stupidity wrt omitting B C D even though A B C D appears.  
 template <class Middle> void FixSRI(int lower, float negative_lower_prob, unsigned int n, const uint64_t *keys, const WordIndex *vocab_ids, typename Middle::Value *unigrams, std::vector<Middle> &middle) {
   typename Middle::Value blank;
   // Note that negative_lower_prob is the negative of the probability (so it's currently >= 0).  We still want the sign bit off to indicate left extension, so I just do -= on the backoffs.  
-  InitializeBlank(negative_lower_prob, blank);
+  blank.prob = negative_lower_prob;
+  blank.backoff = kNoExtensionBackoff;
   // An entry was found at lower (order lower + 2).  
   // We need to insert blanks starting at lower + 1 (order lower + 3).
   unsigned int fix = static_cast<unsigned int>(lower + 1);
@@ -78,6 +117,7 @@ template <class Middle> void FixSRI(int lower, float negative_lower_prob, unsign
     blank.prob -= unigrams[vocab_ids[1]].backoff;
     SetExtension(unigrams[vocab_ids[1]].backoff);
     // Bigram including a unigram's backoff
+    SetRest(vocab_ids, 2, blank);
     middle[0].Insert(Middle::Packing::Make(keys[0], blank));
     fix = 1;
   } else {
@@ -91,6 +131,7 @@ template <class Middle> void FixSRI(int lower, float negative_lower_prob, unsign
       SetExtension(backoff);
       blank.prob -= backoff;
     }
+    SetRest(vocab_ids, fix + 2, blank);
     middle[fix].Insert(Middle::Packing::Make(keys[fix], blank));
     backoff_hash = detail::CombineWordHash(backoff_hash, vocab_ids[fix + 2]);
   }
@@ -106,6 +147,8 @@ template <class Voc, class Store, class Middle, class Activate> void ReadNGrams(
   typename Middle::MutableIterator found;
   for (size_t i = 0; i < count; ++i) {
     ReadNGram(f, n, vocab, &*vocab_ids.begin(), value, warn);
+
+    SetRest(&vocab_ids.front(), n, value);
 
     keys[0] = detail::CombineWordHash(static_cast<uint64_t>(vocab_ids.front()), vocab_ids[1]);
     for (unsigned int h = 1; h < n - 1; ++h) {
