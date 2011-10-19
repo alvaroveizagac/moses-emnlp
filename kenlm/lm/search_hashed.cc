@@ -88,6 +88,15 @@ class AwfulGlobal {
       }
     }
 
+    void ApplyUnigram(detail::Additional *weights) {
+      for (size_t i = 0; i < unigram_.size(); ++i) {
+        weights[i].rest = unigram_[i].prob;
+        std::cout << "1 " << -fabsf(weights[i].prob) << ' ' << weights[i].rest << '\n';
+      }
+      unigram_.clear();
+    }
+    void ApplyUnigram(ProbBackoff * /*weights */) {}
+
   private:
     std::vector<ProbBackoff> unigram_;
     const ProbingModel *models_[3];
@@ -210,6 +219,8 @@ template <class MiddleT, class LongestT> template <class Voc> void TemplateHashe
   PositiveProbWarn warn(config.positive_log_probability);
 
   Read1Grams(f, counts[0], vocab, unigram.Raw(), warn);
+  awful.ApplyUnigram(unigram.Raw());
+
   CheckSpecials(config, vocab);
 
   try {
