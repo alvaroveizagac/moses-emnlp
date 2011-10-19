@@ -108,7 +108,9 @@ int main(int argc, char *argv[]) {
       case lm::ngram::QUANT_ARRAY_TRIE_SORTED:
         Query<lm::ngram::QuantArrayTrieModel>(argv[1], sentence_context);
         break;
-      case lm::ngram::HASH_REST:
+      case lm::ngram::REST_HASH_PROBING:
+        Query<lm::ngram::RestProbingModel>(argv[1], sentence_context);
+        break;
       default:
         std::cerr << "Unrecognized kenlm model type " << model_type << std::endl;
         abort();

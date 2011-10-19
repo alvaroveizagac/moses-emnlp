@@ -171,6 +171,7 @@ template <class Search, class VocabularyT> class GenericModel : public base::Mod
 // These must also be instantiated in the cc file.  
 typedef ::lm::ngram::ProbingVocabulary Vocabulary;
 typedef detail::GenericModel<detail::ProbingHashedSearch, Vocabulary> ProbingModel; // HASH_PROBING
+typedef detail::GenericModel<detail::RestProbingHashedSearch, Vocabulary> RestProbingModel; // REST_HASH_PROBING
 // Default implementation.  No real reason for it to be the default.  
 typedef ProbingModel Model;
 

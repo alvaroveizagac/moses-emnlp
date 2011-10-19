@@ -168,6 +168,8 @@ int main(int argc, char *argv[]) {
       if (!strcmp(model_type, "probing")) {
         if (quantize || set_backoff_bits) ProbingQuantizationUnsupported();
         ProbingModel(from_file, config);
+      } else if (!strcmp(model_type, "rest")) {
+        RestProbingModel(from_file, config);
       } else if (!strcmp(model_type, "trie")) {
         if (quantize) {
           if (bhiksha) {

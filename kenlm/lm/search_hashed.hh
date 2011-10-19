@@ -179,7 +179,7 @@ struct RestProbingHashedSearch : public TemplateHashedSearch<
   util::ProbingHashTable<util::ByteAlignedPacking<uint64_t, Additional>, IdentityHash>,
   util::ProbingHashTable<util::ByteAlignedPacking<uint64_t, Prob>, IdentityHash> > {
 
-  static const ModelType kModelType = HASH_REST;
+  static const ModelType kModelType = REST_HASH_PROBING;
 };
 
 } // namespace detail

@@ -62,7 +62,6 @@ class AwfulGlobal {
       std::vector<uint64_t> number;
       ReadARPACounts(uni, number);
       assert(number.size() == 1);
-      ReadNGramHeader(uni, 1);
       unigram_.resize(number[0]);
       PositiveProbWarn warn;
       Read1Grams(uni, (size_t)number[0], vocab, &*unigram_.begin(), warn);
