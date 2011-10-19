@@ -58,11 +58,13 @@ class AwfulGlobal {
   public:
     AwfulGlobal() {
       util::FilePiece uni("1");
-      ProbingVocabulary vocab;
       std::vector<uint64_t> number;
       ReadARPACounts(uni, number);
       assert(number.size() == 1);
       unigram_.resize(number[0]);
+      ProbingVocabulary vocab;
+      std::vector<char> vocab_backing(ProbingVocabulary::Size(number[0] + 1, Config()));
+      vocab.SetupMemory(&vocab_backing.front(), ProbingVocabulary::Size(number[0] + 1, Config()), number[0] + 1, Config()); 
       PositiveProbWarn warn;
       Read1Grams(uni, (size_t)number[0], vocab, &*unigram_.begin(), warn);
 
