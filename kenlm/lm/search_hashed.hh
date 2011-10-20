@@ -27,6 +27,14 @@ inline uint64_t CombineWordHash(uint64_t current, const WordIndex next) {
   return ret;
 }
 
+inline void SetRest(const ProbBackoff &/*weights*/, FullScoreReturn &ret) {
+  ret.rest = ret.prob;
+}
+
+inline void SetRest(const Rest &weights, FullScoreReturn &ret) {
+  ret.rest = weights.rest;
+}
+
 template <class MiddleT, class LongestT> class TemplateHashedSearch {
   public:
     typedef uint64_t Node;
@@ -65,6 +73,7 @@ template <class MiddleT, class LongestT> class TemplateHashedSearch {
       ret.extend_left = static_cast<uint64_t>(word);
       val.i |= util::kSignBit;
       ret.prob = val.f;
+      SetRest(entry, ret);
       backoff = entry.backoff;
       next = static_cast<Node>(word);
     }
@@ -121,6 +130,7 @@ template <class MiddleT, class LongestT> class TemplateHashedSearch {
       ret.extend_left = node;
       enc.i |= util::kSignBit;
       ret.prob = enc.f;
+      SetRest(found->GetValue(), ret);
       backoff = found->GetValue().backoff;
       return true;
     }
@@ -171,12 +181,8 @@ struct ProbingHashedSearch : public TemplateHashedSearch<
   static const ModelType kModelType = HASH_PROBING;
 };
 
-struct Additional : ProbBackoff {
-  float rest;
-};
-
 struct RestProbingHashedSearch : public TemplateHashedSearch<
-  util::ProbingHashTable<util::ByteAlignedPacking<uint64_t, Additional>, IdentityHash>,
+  util::ProbingHashTable<util::ByteAlignedPacking<uint64_t, Rest>, IdentityHash>,
   util::ProbingHashTable<util::ByteAlignedPacking<uint64_t, Prob>, IdentityHash> > {
 
   static const ModelType kModelType = REST_HASH_PROBING;

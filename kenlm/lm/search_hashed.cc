@@ -88,7 +88,7 @@ class AwfulGlobal {
       }
     }
 
-    void ApplyUnigram(detail::Additional *weights) {
+    void ApplyUnigram(Rest *weights) {
       for (size_t i = 0; i < unigram_.size(); ++i) {
         weights[i].rest = unigram_[i].prob;
         std::cout << "1 " << -fabsf(weights[i].prob) << ' ' << weights[i].rest << '\n';
@@ -104,7 +104,7 @@ class AwfulGlobal {
 
 AwfulGlobal awful;
 
-void SetRest(const WordIndex *vocab_ids, unsigned int n, detail::Additional &weights) {
+void SetRest(const WordIndex *vocab_ids, unsigned int n, Rest &weights) {
   weights.rest = awful.GetRest(vocab_ids, n);
   std::cout << n << ' ' << -fabsf(weights.prob) << ' ' << weights.rest << '\n';
 }
