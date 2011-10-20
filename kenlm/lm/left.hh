@@ -131,12 +131,13 @@ template <class M> class RuleScore {
     void Terminal(WordIndex word) {
       State copy(out_.right);
       FullScoreReturn ret(model_.FullScore(copy, word, out_.right));
-      prob_ += ret.prob;
-      if (left_done_) return;
+      if (left_done_) { prob_ += ret.prob; return; }
       if (ret.independent_left) {
+        prob_ += ret.prob;
         left_done_ = true;
         return;
       }
+      prob_ += ret.rest;
       out_.left.pointers[out_.left.length++] = ret.extend_left;
       if (out_.right.length != copy.length + 1)
         left_done_ = true;
@@ -229,13 +230,17 @@ template <class M> class RuleScore {
 
   private:
     void ProcessRet(const FullScoreReturn &ret) {
-      prob_ += ret.prob;
-      if (left_done_) return;
+      if (left_done_) {
+        prob_ += ret.prob;
+        return;
+      }
       if (ret.independent_left) {
+        prob_ += ret.prob;
         left_done_ = true;
         return;
       }
       out_.left.pointers[out_.left.length++] = ret.extend_left;
+      prob_ += ret.rest;
     }
 
     const M &model_;

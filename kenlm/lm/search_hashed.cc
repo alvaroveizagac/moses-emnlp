@@ -57,7 +57,7 @@ template <class LowerValue> class ActivateUnigram {
 class AwfulGlobal {
   public:
     AwfulGlobal() {
-      util::FilePiece uni("1");
+/*      util::FilePiece uni("1");
       std::vector<uint64_t> number;
       ReadARPACounts(uni, number);
       assert(number.size() == 1);
@@ -70,7 +70,7 @@ class AwfulGlobal {
 
       models_[0] = new ProbingModel("2");
       models_[1] = new ProbingModel("3");
-      models_[2] = new ProbingModel("4");
+      models_[2] = new ProbingModel("4");*/
     }
 
     ~AwfulGlobal() {
