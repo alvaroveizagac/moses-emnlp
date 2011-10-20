@@ -136,6 +136,8 @@ template <class Search, class VocabularyT> class GenericModel : public base::Mod
         // Amount of additional content that should be considered by the next call.
         unsigned char &next_use) const;
 
+    float UnRest(uint64_t extend_pointer, unsigned char extend_length) const;
+
   private:
     friend void LoadLM<>(const char *file, const Config &config, GenericModel<Search, VocabularyT> &to);
 

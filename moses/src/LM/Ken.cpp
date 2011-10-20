@@ -325,6 +325,8 @@ LanguageModel *ConstructKenLM(const std::string &file, ScoreIndexManager &manage
       switch(model_type) {
         case lm::ngram::HASH_PROBING:
           return new LanguageModelKen<lm::ngram::ProbingModel>(file, manager, factorType, lazy);
+        case lm::ngram::REST_HASH_PROBING:
+          return new LanguageModelKen<lm::ngram::RestProbingModel>(file, manager, factorType, lazy);
         case lm::ngram::TRIE_SORTED:
           return new LanguageModelKen<lm::ngram::TrieModel>(file, manager, factorType, lazy);
         case lm::ngram::QUANT_TRIE_SORTED:

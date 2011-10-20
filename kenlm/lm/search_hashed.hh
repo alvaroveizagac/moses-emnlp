@@ -27,15 +27,20 @@ inline uint64_t CombineWordHash(uint64_t current, const WordIndex next) {
   return ret;
 }
 
-inline float GetRest(const ProbBackoff &weights) {
+inline void GetRest(const ProbBackoff &weights, float &prob, float &rest) {
   util::FloatEnc val;
   val.f = weights.prob;
   val.i |= util::kSignBit;
-  return val.f;
+  prob = val.f;
+  rest = prob;
 }
 
-inline float GetRest(const Rest &weights) {
-  return weights.rest;
+inline void GetRest(const Rest &weights, float &prob, float &rest) {
+  util::FloatEnc val;
+  val.f = weights.prob;
+  val.i |= util::kSignBit;
+  prob = val.f;
+  rest = weights.rest;
 }
 
 inline void SetRest(const ProbBackoff &/*weights*/, FullScoreReturn &ret) {
@@ -114,17 +119,19 @@ template <class MiddleT, class LongestT> class TemplateHashedSearch {
     const Middle *MiddleBegin() const { return &*middle_.begin(); }
     const Middle *MiddleEnd() const { return &*middle_.end(); }
 
-    Node Unpack(uint64_t extend_pointer, unsigned char extend_length, float &prob) const {
+    Node Unpack(uint64_t extend_pointer, unsigned char extend_length, float &prob, float &rest) const {
+      const LowerValue *lower;
       if (extend_length == 1) {
-        prob = GetRest(unigram.Lookup(static_cast<uint64_t>(extend_pointer)));
+        lower = &unigram.Lookup(static_cast<uint64_t>(extend_pointer));
       } else {
         typename Middle::ConstIterator found;
         if (!middle_[extend_length - 2].Find(extend_pointer, found)) {
           std::cerr << "Extend pointer " << extend_pointer << " should have been found for length " << (unsigned) extend_length << std::endl;
           abort();
         }
-        prob = GetRest(found->GetValue());
+        lower = &found->GetValue();
       }
+      GetRest(*lower, prob, rest);
       return extend_pointer;
     }
 

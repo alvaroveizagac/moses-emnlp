@@ -180,19 +180,29 @@ template <class M> class RuleScore {
 
       // First word
       ProcessRet(model_.ExtendLeft(out_.right.words, out_.right.words + out_.right.length, out_.right.backoff, in.left.pointers[0], 1, back, next_use));
-      if (!next_use) {
+      if (next_use != out_.right.length) {
         left_done_ = true;
-        out_.right = in.right;
-        return;
+        if (!next_use) {
+          out_.right = in.right;
+          for (const uint64_t *i = in.left.pointers + 1; i < in.left.pointers + in.left.length; ++i) {
+            prob_ += model_.UnRest(*i, i - in.left.pointers + 1);
+          }
+          return;
+        }
       }
       // Words after the first, so extending a bigram to begin with
       unsigned char extend_length = 2;
       for (const uint64_t *i = in.left.pointers + 1; i < in.left.pointers + in.left.length; ++i, ++extend_length) {
         ProcessRet(model_.ExtendLeft(out_.right.words, out_.right.words + next_use, back, *i, extend_length, back2, next_use));
-        if (!next_use) {
+        if (next_use != out_.right.length) {
           left_done_ = true;
-          out_.right = in.right;
-          return;
+          if (!next_use) {
+            out_.right = in.right;
+            for (++i; i < in.left.pointers + in.left.length; ++i) {
+              prob_ += model_.UnRest(*i, i - in.left.pointers + 1);
+            }
+            return;
+          }
         }
         std::swap(back, back2);
       }
@@ -240,6 +250,7 @@ template <class M> class RuleScore {
         return;
       }
       out_.left.pointers[out_.left.length++] = ret.extend_left;
+      if (out_.left.length == 4 && ret.extend_left == 15284946611488335439ULL) abort();
       prob_ += ret.rest;
     }
 

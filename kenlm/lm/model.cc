@@ -154,8 +154,7 @@ template <class Search, class VocabularyT> FullScoreReturn GenericModel<Search, 
     unsigned char &next_use) const {
   FullScoreReturn ret;
   float subtract_me;
-  typename Search::Node node(search_.Unpack(extend_pointer, extend_length, subtract_me));
-  ret.prob = subtract_me;
+  typename Search::Node node(search_.Unpack(extend_pointer, extend_length, ret.prob, subtract_me));
   ret.ngram_length = extend_length;
   next_use = 0;
   // If this function is called, then it does depend on left words.   
@@ -191,6 +190,13 @@ template <class Search, class VocabularyT> FullScoreReturn GenericModel<Search, 
   ret.independent_left = true;
   ret.prob -= subtract_me;
   return ret;
+}
+
+// TODO: optimize
+template <class Search, class VocabularyT> float GenericModel<Search, VocabularyT>::UnRest(uint64_t extend_pointer, unsigned char extend_length) const {
+  float prob, rest;
+  search_.Unpack(extend_pointer, extend_length, prob, rest);
+  return prob - rest;
 }
 
 namespace {

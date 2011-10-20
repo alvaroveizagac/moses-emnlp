@@ -97,14 +97,17 @@ template <class Quant, class Bhiksha> class TrieSearch {
       return true;
     }
 
-    Node Unpack(uint64_t extend_pointer, unsigned char extend_length, float &prob) const {
+    Node Unpack(uint64_t extend_pointer, unsigned char extend_length, float &prob, float &rest) const {
       if (extend_length == 1) {
         float ignored;
         Node ret;
         unigram.Find(static_cast<WordIndex>(extend_pointer), prob, ignored, ret);
+        rest = prob;
         return ret;
       }
-      return middle_begin_[extend_length - 2].ReadEntry(extend_pointer, prob);
+      Node ret = middle_begin_[extend_length - 2].ReadEntry(extend_pointer, prob);
+      rest = prob;
+      return ret;
     }
 
   private:
