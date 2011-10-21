@@ -1,5 +1,5 @@
 lib_LTLIBRARIES = libkenlm.la
-bin_PROGRAMS = query build_binary
+bin_PROGRAMS = query build_binary verify
 
 AM_CPPFLAGS = -W -Wall -ffor-scope -D_FILE_OFFSET_BITS=64 -D_LARGE_FILES $(BOOST_CPPFLAGS)
 libkenlm_la_SOURCES = \
@@ -29,4 +29,7 @@ query_LDADD = libkenlm.la
 
 build_binary_SOURCES = lm/build_binary.cc
 build_binary_LDADD = libkenlm.la
+
+verify_SOURCES = lm/verify_nbest.cc
+verify_LDADD = libkenlm.la
 
