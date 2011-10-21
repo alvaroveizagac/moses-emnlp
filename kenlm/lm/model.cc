@@ -11,6 +11,7 @@
 #include <functional>
 #include <numeric>
 #include <cmath>
+#include <fstream>
 
 namespace lm {
 namespace ngram {
@@ -145,6 +146,8 @@ template <class Search, class VocabularyT> void GenericModel<Search, VocabularyT
   std::copy(context_rbegin, context_rbegin + out_state.length, out_state.words);
 }
 
+//std::fstream extend_log("extend.log", std::ios::out);
+
 template <class Search, class VocabularyT> FullScoreReturn GenericModel<Search, VocabularyT>::ExtendLeft(
     const WordIndex *add_rbegin, const WordIndex *add_rend,
     const float *backoff_in,
@@ -155,6 +158,7 @@ template <class Search, class VocabularyT> FullScoreReturn GenericModel<Search, 
   FullScoreReturn ret;
   float subtract_me;
   typename Search::Node node(search_.Unpack(extend_pointer, extend_length, ret.prob, subtract_me));
+  float orig_prob = ret.prob;
   ret.ngram_length = extend_length;
   next_use = 0;
   // If this function is called, then it does depend on left words.   
@@ -166,16 +170,14 @@ template <class Search, class VocabularyT> FullScoreReturn GenericModel<Search, 
     if (i == add_rend) {
       // Ran out of words.
       for (const float *b = backoff_in + ret.ngram_length - extend_length; b < backoff_in + (add_rend - add_rbegin); ++b) ret.prob += *b;
-      ret.prob -= subtract_me;
-      return ret;
+      goto out;
     }
     if (mid_iter == search_.MiddleEnd()) break;
     if (ret.independent_left || !search_.LookupMiddle(*mid_iter, *i, *backoff_out, node, ret)) {
       // Didn't match a word. 
       ret.independent_left = true;
       for (const float *b = backoff_in + ret.ngram_length - extend_length; b < backoff_in + (add_rend - add_rbegin); ++b) ret.prob += *b;
-      ret.prob -= subtract_me;
-      return ret;
+      goto out;
     }
     ret.ngram_length = mid_iter - search_.MiddleBegin() + 2;
     if (HasExtension(*backoff_out)) next_use = i - add_rbegin + 1;
@@ -186,9 +188,14 @@ template <class Search, class VocabularyT> FullScoreReturn GenericModel<Search, 
     ret.prob += backoff_in[i - add_rbegin];
   } else {
     ret.ngram_length = P::Order();
+    ret.rest = ret.prob;
   }
   ret.independent_left = true;
+
+out: 
+  //extend_log << ret.prob << ' ' << orig_prob << ' ' << subtract_me << '\n';
   ret.prob -= subtract_me;
+  ret.rest -= subtract_me;
   return ret;
 }
 
@@ -196,6 +203,7 @@ template <class Search, class VocabularyT> FullScoreReturn GenericModel<Search, 
 template <class Search, class VocabularyT> float GenericModel<Search, VocabularyT>::UnRest(uint64_t extend_pointer, unsigned char extend_length) const {
   float prob, rest;
   search_.Unpack(extend_pointer, extend_length, prob, rest);
+  //extend_log << prob << ' ' << prob << ' ' << rest << '\n';
   return prob - rest;
 }
 
