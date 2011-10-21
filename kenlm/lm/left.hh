@@ -255,7 +255,7 @@ template <class M> class RuleScore {
         return;
       }
       out_.left.pointers[out_.left.length++] = ret.extend_left;
-      prob_ += ret.prob;
+      prob_ += ret.rest;
     }
 
     const M &model_;
