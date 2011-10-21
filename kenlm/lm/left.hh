@@ -164,7 +164,12 @@ template <class M> class RuleScore {
 
       if (!out_.right.length) {
         out_.right = in.right;
-        if (left_done_) return;
+        for (const uint64_t *i = in.left.pointers; i < in.left.pointers + in.left.length; ++i) {
+          prob_ += model_.UnRest(*i, i - in.left.pointers + 1);
+        }
+        if (left_done_) {
+          return;
+        }
         if (out_.left.length) {
           left_done_ = true;
         } else {
@@ -250,7 +255,6 @@ template <class M> class RuleScore {
         return;
       }
       out_.left.pointers[out_.left.length++] = ret.extend_left;
-      if (out_.left.length == 4 && ret.extend_left == 15284946611488335439ULL) abort();
       prob_ += ret.rest;
     }
 
