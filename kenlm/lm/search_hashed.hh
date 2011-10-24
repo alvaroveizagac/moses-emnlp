@@ -40,8 +40,8 @@ inline void GetRest(const Rest &weights, float &prob, float &rest) {
   val.f = weights.prob;
   val.i |= util::kSignBit;
   prob = val.f;
-  //rest = 0.39374 * prob + 0.60523 * weights.rest;
-  rest = weights.rest;
+  rest = 0.39374 * prob + 0.60523 * weights.rest;
+  //rest = weights.rest;
 }
 
 inline void SetRest(const ProbBackoff &/*weights*/, FullScoreReturn &ret) {
@@ -50,8 +50,8 @@ inline void SetRest(const ProbBackoff &/*weights*/, FullScoreReturn &ret) {
 
 inline void SetRest(const Rest &weights, FullScoreReturn &ret) {
 //  ret.rest = ret.prob * 1.1 + weights.rest * -0.1;
-//  ret.rest = 0.39374 * ret.prob + 0.60523 * weights.rest;
-  ret.rest = weights.rest;
+  ret.rest = 0.39374 * ret.prob + 0.60523 * weights.rest;
+//  ret.rest = weights.rest;
 }
 
 template <class MiddleT, class LongestT> class TemplateHashedSearch {
