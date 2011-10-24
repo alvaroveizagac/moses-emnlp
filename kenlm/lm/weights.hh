@@ -11,18 +11,10 @@ struct Prob {
 struct ProbBackoff {
   float prob;
   float backoff;
-
-  float GetRest() const {
-    return prob;
-  }
 };
 
 struct Rest : ProbBackoff {
   float rest;
-
-  float GetRest() const {
-    return rest;
-  }
 };
 
 } // namespace lm
