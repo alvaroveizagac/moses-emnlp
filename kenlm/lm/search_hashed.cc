@@ -91,7 +91,7 @@ class AwfulGlobal {
     void ApplyUnigram(Rest *weights) {
       for (size_t i = 0; i < unigram_.size(); ++i) {
         weights[i].rest = unigram_[i].prob;
-        std::cout << "1 " << -fabsf(weights[i].prob) << ' ' << weights[i].rest << '\n';
+//        std::cout << "1 " << -fabsf(weights[i].prob) << ' ' << weights[i].rest << '\n';
       }
       unigram_.clear();
     }
