@@ -57,20 +57,20 @@ template <class LowerValue> class ActivateUnigram {
 class AwfulGlobal {
   public:
     AwfulGlobal() {
-/*      util::FilePiece uni("1");
+      util::FilePiece uni("1");
       std::vector<uint64_t> number;
       ReadARPACounts(uni, number);
       assert(number.size() == 1);
       unigram_.resize(number[0]);
-      ProbingVocabulary vocab;
       std::vector<char> vocab_backing(ProbingVocabulary::Size(number[0] + 1, Config()));
+      ProbingVocabulary vocab;
       vocab.SetupMemory(&vocab_backing.front(), ProbingVocabulary::Size(number[0] + 1, Config()), number[0] + 1, Config()); 
       PositiveProbWarn warn;
       Read1Grams(uni, (size_t)number[0], vocab, &*unigram_.begin(), warn);
 
       models_[0] = new ProbingModel("2");
       models_[1] = new ProbingModel("3");
-      models_[2] = new ProbingModel("4");*/
+      models_[2] = new ProbingModel("4");
     }
 
     ~AwfulGlobal() {
@@ -106,12 +106,25 @@ AwfulGlobal awful;
 
 void SetRest(const WordIndex *vocab_ids, unsigned int n, Rest &weights) {
   weights.rest = awful.GetRest(vocab_ids, n);
-  std::cout << n << ' ' << -fabsf(weights.prob) << ' ' << weights.rest << '\n';
+  weights.upper = -fabsf(weights.prob);
+  weights.lower = weights.upper;
+//  std::cout << n << ' ' << -fabsf(weights.prob) << ' ' << weights.rest << '\n';
 }
 
 void SetRest(const WordIndex *, unsigned int, ProbBackoff &) {}
 
 void SetRest(const WordIndex *, unsigned int, Prob &) {}
+
+void UpdateBounds(const ProbBackoff &with, Rest &to) {
+  to.upper = std::max(to.upper, with.prob);
+  to.lower = std::min(to.lower, with.prob);
+}
+void UpdateBounds(const Prob &with, Rest &to) {
+  to.upper = std::max(to.upper, with.prob);
+  to.lower = std::min(to.lower, with.prob);
+}
+void UpdateBounds(const ProbBackoff &with, ProbBackoff &to) {}
+void UpdateBounds(const Prob &with, ProbBackoff &to) {}
 
 // Fix SRI's stupidity wrt omitting B C D even though A B C D appears.  
 template <class Middle> void FixSRI(int lower, float negative_lower_prob, unsigned int n, const uint64_t *keys, const WordIndex *vocab_ids, typename Middle::Value *unigrams, std::vector<Middle> &middle) {
@@ -173,9 +186,11 @@ template <class Voc, class Store, class Middle, class Activate> void ReadNGrams(
     util::FloatEnc fix_prob;
     for (lower = n - 3; ; --lower) {
       if (lower == -1) {
-        fix_prob.f = unigrams[vocab_ids.front()].prob;
+        typename Middle::Value &val = unigrams[vocab_ids.front()];
+        fix_prob.f = val.prob;
         fix_prob.i &= ~util::kSignBit;
-        unigrams[vocab_ids.front()].prob = fix_prob.f;
+        val.prob = fix_prob.f;
+        UpdateBounds(value, val);
         break;
       }
       if (middle[lower].UnsafeMutableFind(keys[lower], found)) {
@@ -183,11 +198,23 @@ template <class Voc, class Store, class Middle, class Activate> void ReadNGrams(
         fix_prob.f = found->MutableValue().prob;
         fix_prob.i &= ~util::kSignBit;
         found->MutableValue().prob = fix_prob.f;
+        UpdateBounds(value, found->MutableValue());
         // We don't need to recurse further down because this entry already set the bits for lower entries.  
         break;
       }
     }
     if (lower != static_cast<int>(n) - 3) FixSRI(lower, fix_prob.f, n, &*keys.begin(), &*vocab_ids.begin(), unigrams, middle);
+    // These are just for updating bounds.  TODO: this loop shouldn't happen for normal probing models.  
+    if (lower != -1) {
+      for (--lower; ; --lower) {
+        if (lower == -1) {
+          UpdateBounds(value, unigrams[vocab_ids.front()]);
+          break;
+        }
+        UTIL_THROW_IF(!middle[lower].UnsafeMutableFind(keys[lower], found), util::Exception, "Should be a lower order entry but there isn't");
+        UpdateBounds(value, found->MutableValue());
+      }
+    }
     activate(&*vocab_ids.begin(), n);
   }
 

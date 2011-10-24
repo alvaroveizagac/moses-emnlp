@@ -15,6 +15,8 @@ struct ProbBackoff {
 
 struct Rest : ProbBackoff {
   float rest;
+  float lower;
+  float upper;
 };
 
 } // namespace lm
