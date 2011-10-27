@@ -12,6 +12,7 @@
 #include "util/file_piece.hh"
 
 #include <string>
+#include <fstream>
 
 #include <math.h>
 
@@ -57,7 +58,7 @@ template <class LowerValue> class ActivateUnigram {
 class AwfulGlobal {
   public:
     AwfulGlobal() {
-      util::FilePiece uni("1");
+/*      util::FilePiece uni("1");
       std::vector<uint64_t> number;
       ReadARPACounts(uni, number);
       assert(number.size() == 1);
@@ -70,13 +71,13 @@ class AwfulGlobal {
 
       models_[0] = new ProbingModel("2");
       models_[1] = new ProbingModel("3");
-      models_[2] = new ProbingModel("4");
+      models_[2] = new ProbingModel("4");*/
     }
 
     ~AwfulGlobal() {
-      delete models_[0];
+/*      delete models_[0];
       delete models_[1];
-      delete models_[2];
+      delete models_[2];*/
     }
 
     float GetRest(const WordIndex *vocab_ids, unsigned int n) {
@@ -91,6 +92,8 @@ class AwfulGlobal {
     void ApplyUnigram(Rest *weights) {
       for (size_t i = 0; i < unigram_.size(); ++i) {
         weights[i].rest = unigram_[i].prob;
+        weights[i].lower = -fabsf(weights[i].prob);
+        weights[i].upper = weights[i].lower;
 //        std::cout << "1 " << -fabsf(weights[i].prob) << ' ' << weights[i].rest << '\n';
       }
       unigram_.clear();
@@ -223,6 +226,19 @@ template <class Voc, class Store, class Middle, class Activate> void ReadNGrams(
 
 } // namespace
 namespace detail {
+
+const float kRestWeights[4][6] = {
+  {0.0158082, 0.142494, 0.00694743, 0.72096, 0.0844032, 0.0781648},
+  {-0.00637761, 0.43229, -0.0558925, 0.575986, -0.00787255, -0.0102447},
+  {0.0067138, 0.638819, -0.0523763, 0.403326, -0.0298767, -0.00771542},
+  {0.00247556, 0.680603, -0.0418086, 0.349169, -0.0272333, 0.00609867},
+};
+
+//std::fstream RestLog("rest_log", std::ios::out);
+
+/*void LogRest(unsigned char order, float prob, const Rest &weights) {
+  RestLog << (unsigned)order << ' ' << prob << ' ' << weights.backoff << ' ' << weights.rest << ' ' << weights.lower << ' ' << weights.upper;
+}*/
  
 template <class MiddleT, class LongestT> uint8_t *TemplateHashedSearch<MiddleT, LongestT>::SetupMemory(uint8_t *start, const std::vector<uint64_t> &counts, const Config &config) {
   std::size_t allocated = Unigram::Size(counts[0]);

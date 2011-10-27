@@ -13,6 +13,7 @@
 
 #include <algorithm>
 #include <iostream>
+#include <fstream>
 #include <vector>
 
 namespace util { class FilePiece; }
@@ -27,32 +28,22 @@ inline uint64_t CombineWordHash(uint64_t current, const WordIndex next) {
   return ret;
 }
 
-inline void GetRest(const ProbBackoff &weights, float &prob, float &rest) {
-  util::FloatEnc val;
-  val.f = weights.prob;
-  val.i |= util::kSignBit;
-  prob = val.f;
+inline void GetRest(unsigned char /* order */, const ProbBackoff &/*weights*/, float prob, float &rest) {
   rest = prob;
 }
 
-inline void GetRest(const Rest &weights, float &prob, float &rest) {
-  util::FloatEnc val;
-  val.f = weights.prob;
-  val.i |= util::kSignBit;
-  prob = val.f;
-  rest = 0.39374 * prob + 0.60523 * weights.rest;
-  //rest = weights.rest;
+extern const float kRestWeights[4][6];
+
+inline void GetRest(unsigned char order, const Rest &weights, float prob, float &rest) {
+  const float *basis = kRestWeights[order - 1];
+  rest = basis[0] + basis[1] * prob + basis[2] * weights.backoff + basis[3] * weights.rest + basis[4] * weights.lower + basis[5] * weights.upper;
 }
 
-inline void SetRest(const ProbBackoff &/*weights*/, FullScoreReturn &ret) {
-  ret.rest = ret.prob;
-}
+inline void LogRest(unsigned char order, float prob, const ProbBackoff &weights) {}
 
-inline void SetRest(const Rest &weights, FullScoreReturn &ret) {
-//  ret.rest = ret.prob * 1.1 + weights.rest * -0.1;
-  ret.rest = 0.39374 * ret.prob + 0.60523 * weights.rest;
-//  ret.rest = weights.rest;
-}
+void LogRest(unsigned char order, float prob, const Rest &weights);
+
+extern std::fstream RestLog;
 
 template <class MiddleT, class LongestT> class TemplateHashedSearch {
   public:
@@ -92,7 +83,7 @@ template <class MiddleT, class LongestT> class TemplateHashedSearch {
       ret.extend_left = static_cast<uint64_t>(word);
       val.i |= util::kSignBit;
       ret.prob = val.f;
-      SetRest(entry, ret);
+      GetRest(1, entry, ret.prob, ret.rest);
       backoff = entry.backoff;
       next = static_cast<Node>(word);
     }
@@ -134,7 +125,13 @@ template <class MiddleT, class LongestT> class TemplateHashedSearch {
         }
         lower = &found->GetValue();
       }
-      GetRest(*lower, prob, rest);
+      util::FloatEnc val;
+      val.f = lower->prob;
+      val.i |= util::kSignBit;
+      prob = val.f;
+
+      GetRest(extend_length, *lower, prob, rest);
+//      LogRest(extend_length, prob, *lower);
       return extend_pointer;
     }
 
@@ -148,7 +145,7 @@ template <class MiddleT, class LongestT> class TemplateHashedSearch {
       ret.extend_left = node;
       enc.i |= util::kSignBit;
       ret.prob = enc.f;
-      SetRest(found->GetValue(), ret);
+      GetRest(&middle - MiddleBegin() + 2, found->GetValue(), ret.prob, ret.rest);
       backoff = found->GetValue().backoff;
       return true;
     }
