@@ -187,7 +187,7 @@ template <class Search, class VocabularyT> FullScoreReturn GenericModel<Search, 
     ret.prob += backoff_in[i - add_rbegin];
   } else {
     ret.ngram_length = P::Order();
-    ret.rest = ret.prob;
+    ret.left_rest = ret.prob;
   }
   ret.independent_left = true;
 
@@ -195,7 +195,7 @@ out:
 //  detail::RestLog << ' ' << ret.prob << '\n';
   //extend_log << ret.prob << ' ' << orig_prob << ' ' << subtract_me << '\n';
   ret.prob -= subtract_me;
-  ret.rest -= subtract_me;
+  ret.left_rest -= subtract_me;
   return ret;
 }
 

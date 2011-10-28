@@ -52,7 +52,7 @@ template <class Model> void Query(const Model &model, bool sentence_context) {
       if (vocab == 0) ++oov;
       ret = model.FullScore(state, vocab, out);
       total += ret.prob;
-      std::cout << word << '=' << vocab << ' ' << static_cast<unsigned int>(ret.ngram_length)  << ' ' << ret.prob << '\t';
+      std::cout << word << '=' << vocab << ' ' << static_cast<unsigned int>(ret.ngram_length)  << ' ' << ret.prob << ' ' << ret.left_rest << ' ' << ret.right_rest << '\n';
       state = out;
       char c;
       while (true) {
@@ -93,7 +93,7 @@ int main(int argc, char *argv[]) {
   lm::ngram::ModelType model_type;
   if (lm::ngram::RecognizeBinary(argv[1], model_type)) {
     switch(model_type) {
-      case lm::ngram::HASH_PROBING:
+/*      case lm::ngram::HASH_PROBING:
         Query<lm::ngram::ProbingModel>(argv[1], sentence_context);
         break;
       case lm::ngram::TRIE_SORTED:
@@ -107,7 +107,7 @@ int main(int argc, char *argv[]) {
         break;
       case lm::ngram::QUANT_ARRAY_TRIE_SORTED:
         Query<lm::ngram::QuantArrayTrieModel>(argv[1], sentence_context);
-        break;
+        break;*/
       case lm::ngram::REST_HASH_PROBING:
         Query<lm::ngram::RestProbingModel>(argv[1], sentence_context);
         break;
@@ -116,7 +116,7 @@ int main(int argc, char *argv[]) {
         abort();
     }
   } else {
-    Query<lm::ngram::ProbingModel>(argv[1], sentence_context);
+    Query<lm::ngram::RestProbingModel>(argv[1], sentence_context);
   }
 
   PrintUsage("Total time including destruction:\n");

@@ -138,7 +138,7 @@ template <class M> class RuleScore {
         return;
       }
       out_.left.pointers[out_.left.length++] = ret.extend_left;
-      prob_ += ret.rest;
+      prob_ += ret.left_rest;
       if (out_.right.length != copy.length + 1)
         left_done_ = true;
     }
@@ -255,7 +255,7 @@ template <class M> class RuleScore {
         return;
       }
       out_.left.pointers[out_.left.length++] = ret.extend_left;
-      prob_ += ret.rest;
+      prob_ += ret.left_rest;
     }
 
     const M &model_;

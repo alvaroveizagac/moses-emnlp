@@ -34,7 +34,7 @@ struct FullScoreReturn {
   bool independent_left;
   uint64_t extend_left; // Defined only if independent_left
 
-  float rest;
+  float left_rest, right_rest;
 };
 
 } // namespace lm

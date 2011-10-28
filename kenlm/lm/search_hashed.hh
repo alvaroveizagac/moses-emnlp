@@ -28,15 +28,14 @@ inline uint64_t CombineWordHash(uint64_t current, const WordIndex next) {
   return ret;
 }
 
-inline void GetRest(unsigned char /* order */, const ProbBackoff &/*weights*/, float prob, float &rest) {
-  rest = prob;
+inline void GetRest(const ProbBackoff &/*weights*/, float prob, float &left, float &right) {
+  left = prob;
+  right = 0.0;
 }
 
-extern const float kRestWeights[4][6];
-
-inline void GetRest(unsigned char order, const Rest &weights, float prob, float &rest) {
-  const float *basis = kRestWeights[order - 1];
-  rest = basis[0] + basis[1] * prob + basis[2] * weights.backoff + basis[3] * weights.rest + basis[4] * weights.lower + basis[5] * weights.upper;
+inline void GetRest(const Rest &weights, float /*prob*/, float &left, float &right) {
+  left = weights.left;
+  right = weights.right;
 }
 
 inline void LogRest(unsigned char order, float prob, const ProbBackoff &weights) {}
@@ -83,7 +82,7 @@ template <class MiddleT, class LongestT> class TemplateHashedSearch {
       ret.extend_left = static_cast<uint64_t>(word);
       val.i |= util::kSignBit;
       ret.prob = val.f;
-      GetRest(1, entry, ret.prob, ret.rest);
+      GetRest(entry, ret.prob, ret.left_rest, ret.right_rest);
       backoff = entry.backoff;
       next = static_cast<Node>(word);
     }
@@ -130,7 +129,8 @@ template <class MiddleT, class LongestT> class TemplateHashedSearch {
       val.i |= util::kSignBit;
       prob = val.f;
 
-      GetRest(extend_length, *lower, prob, rest);
+      float TODOfixme;
+      GetRest(*lower, prob, rest, TODOfixme);
 //      LogRest(extend_length, prob, *lower);
       return extend_pointer;
     }
@@ -145,7 +145,7 @@ template <class MiddleT, class LongestT> class TemplateHashedSearch {
       ret.extend_left = node;
       enc.i |= util::kSignBit;
       ret.prob = enc.f;
-      GetRest(&middle - MiddleBegin() + 2, found->GetValue(), ret.prob, ret.rest);
+      GetRest(found->GetValue(), ret.prob, ret.left_rest, ret.right_rest);
       backoff = found->GetValue().backoff;
       return true;
     }
