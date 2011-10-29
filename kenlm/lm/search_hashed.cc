@@ -94,9 +94,6 @@ void AdjustLower(const WordIndex *vocab_ids, const Rest *unigram, float higher, 
   float unigram_left = basis.left;
   float shift = -fabsf(basis.prob);
   float add = powf(10.0, higher) * (higher - unigram_left) - powf(10.0, to.backoff + shift) * (to.backoff + shift - unigram_left);
-  if (&to == unigram + 1) {
-    std::cerr << "Adding " << add << " due to higher=" << higher << " and shift=" << shift << std::endl;
-  }
   to.right += add;
 }
 void AdjustLower(const WordIndex *, const ProbBackoff *, float, ProbBackoff &) {}
@@ -333,19 +330,10 @@ void UnigramRight(Rest *unigram, std::size_t size) {
   for (const Rest *i = unigram; i != unigram + size; ++i) {
     sum_double += pow(10.0, static_cast<double>(i->prob)) * static_cast<double>(i->prob - i->left);
   }
-  std::cerr << "Unigram sum is " << sum_double << std::endl;
   float sum = static_cast<float>(sum_double);
   for (Rest *i = unigram; i != unigram + size; ++i) {
     i->right = pow(10.0, i->backoff) * (i->backoff + sum);
   }
-  std::cerr << "Initial , is " << unigram[1].right << std::endl;
-}
-
-void DebugPrint(const Rest &rest) {
-  std::cerr << "Logging , as " << rest.right << std::endl;
-}
-
-void DebugPrint(const ProbBackoff &backoff) {
 }
 
 template <class MiddleT, class LongestT> template <class Voc> void TemplateHashedSearch<MiddleT, LongestT>::InitializeFromARPA(const char * /*file*/, util::FilePiece &f, const std::vector<uint64_t> &counts, const Config &config, Voc &vocab, Backing &backing) {
@@ -358,13 +346,11 @@ template <class MiddleT, class LongestT> template <class Voc> void TemplateHashe
   CheckSpecials(config, vocab);
   awful.ApplyUnigram(unigram.Raw());
   UnigramRight(unigram.Raw(), counts[0] + 1 - vocab.SawUnk());
-  DebugPrint(unigram.Raw()[1]);
 
   try {
     if (counts.size() > 2) {
       ReadNGrams(f, 2, counts[1], vocab, unigram.Raw(), middle_, ActivateUnigram<LowerValue>(unigram.Raw()), middle_[0], warn);
     }
-    DebugPrint(unigram.Raw()[1]);
     for (unsigned int n = 3; n < counts.size(); ++n) {
       ReadNGrams(f, n, counts[n-1], vocab, unigram.Raw(), middle_, ActivateLowerMiddle<Middle>(unigram.Raw(), middle_[n-3]), middle_[n-2], warn);
     }
@@ -376,7 +362,6 @@ template <class MiddleT, class LongestT> template <class Voc> void TemplateHashe
   } catch (util::ProbingSizeException &e) {
     UTIL_THROW(util::ProbingSizeException, "Avoid pruning n-grams like \"bar baz quux\" when \"foo bar baz quux\" is still in the model.  KenLM will work when this pruning happens, but the probing model assumes these events are rare enough that using blank space in the probing hash table will cover all of them.  Increase probing_multiplier (-p to build_binary) to add more blank spaces.\n");
   }
-  DebugPrint(unigram.Raw()[1]);
   ReadEnd(f);
 }
 
