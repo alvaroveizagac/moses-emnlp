@@ -325,7 +325,7 @@ template <class ModelT> void LoadingTest() {
 BOOST_AUTO_TEST_CASE(probing) {
   LoadingTest<Model>();
 }
-BOOST_AUTO_TEST_CASE(probing) {
+BOOST_AUTO_TEST_CASE(rest_probing) {
   LoadingTest<RestProbingModel>();
 }
 BOOST_AUTO_TEST_CASE(trie) {
