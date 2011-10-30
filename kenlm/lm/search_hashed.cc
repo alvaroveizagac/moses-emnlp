@@ -282,7 +282,7 @@ template <class Voc, class Store, class Middle, class Activate> void ReadNGrams(
     if (lower != static_cast<int>(n) - 3) {
       message.SetFrom(FixSRI(lower, fix_prob.f, n, &*keys.begin(), &*vocab_ids.begin(), unigrams, middle));
     }
-    activate(&*vocab_ids.begin(), n, value.prob);
+    activate(&*vocab_ids.begin(), n, -fabsf(value.prob));
     messages.Send(message);
   }
 
@@ -327,11 +327,11 @@ void UnigramRight(const ProbBackoff *, std::size_t, WordIndex) {}
 void UnigramRight(Rest *unigram, std::size_t size, WordIndex end_sentence) {
   double sum_double = 0.0;
   for (const Rest *i = unigram; i != unigram + size; ++i) {
-    sum_double += pow(10.0, static_cast<double>(i->prob)) * static_cast<double>(i->prob - i->left);
+    sum_double += pow(10.0, static_cast<double>(i->left)) * (static_cast<double>(-fabs(i->prob)) - static_cast<double>(i->left));
   }
   float sum = static_cast<float>(sum_double);
   for (Rest *i = unigram; i != unigram + size; ++i) {
-    i->right = pow(10.0, i->backoff) * (i->backoff + sum);
+    i->right = i->backoff + sum;
   }
   // Nothing follows </s>.  
   unigram[end_sentence].right = 0.0;
