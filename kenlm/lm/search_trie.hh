@@ -65,13 +65,15 @@ template <class Quant, class Bhiksha> class TrieSearch {
 
     void InitializeFromARPA(const char *file, util::FilePiece &f, std::vector<uint64_t> &counts, const Config &config, SortedVocabulary &vocab, Backing &backing);
 
-    void LookupUnigram(WordIndex word, float &backoff, Node &node, FullScoreReturn &ret) const {
+    void LookupUnigram(WordIndex word, float &backoff, Node &node, FullScoreReturn &ret, float &right_rest) const {
+      right_rest = 0.0;
       unigram.Find(word, ret.prob, backoff, node);
       ret.independent_left = (node.begin == node.end);
       ret.extend_left = static_cast<uint64_t>(word);
     }
 
-    bool LookupMiddle(const Middle &mid, WordIndex word, float &backoff, Node &node, FullScoreReturn &ret) const {
+    bool LookupMiddle(const Middle &mid, WordIndex word, float &backoff, Node &node, FullScoreReturn &ret, float &right_rest) const {
+      right_rest = 0.0;
       if (!mid.Find(word, ret.prob, backoff, node, ret.extend_left)) return false;
       ret.independent_left = (node.begin == node.end);
       return true;
@@ -89,24 +91,25 @@ template <class Quant, class Bhiksha> class TrieSearch {
       // TODO: don't decode backoff.
       assert(begin != end);
       FullScoreReturn ignored;
-      float ignored_backoff;
-      LookupUnigram(*begin, ignored_backoff, node, ignored);
+      float ignored_float;
+      LookupUnigram(*begin, ignored_float, node, ignored, ignored_float);
       for (const WordIndex *i = begin + 1; i < end; ++i) {
-        if (!LookupMiddleNoProb(middle_begin_[i - begin - 1], *i, ignored_backoff, node)) return false;
+        if (!LookupMiddleNoProb(middle_begin_[i - begin - 1], *i, ignored_float, node)) return false;
       }
       return true;
     }
 
-    Node Unpack(uint64_t extend_pointer, unsigned char extend_length, float &prob, float &rest) const {
+    Node Unpack(uint64_t extend_pointer, unsigned char extend_length, FullScoreReturn &full, float &right_rest) const {
+      right_rest = 0.0;
       if (extend_length == 1) {
         float ignored;
         Node ret;
-        unigram.Find(static_cast<WordIndex>(extend_pointer), prob, ignored, ret);
-        rest = prob;
+        unigram.Find(static_cast<WordIndex>(extend_pointer), full.prob, ignored, ret);
+        full.left_rest = full.prob;
         return ret;
       }
-      Node ret = middle_begin_[extend_length - 2].ReadEntry(extend_pointer, prob);
-      rest = prob;
+      Node ret = middle_begin_[extend_length - 2].ReadEntry(extend_pointer, full.prob);
+      full.left_rest = full.prob;
       return ret;
     }
 

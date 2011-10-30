@@ -138,7 +138,7 @@ template <class LowerValue> class ActivateUnigram {
 class AwfulGlobal {
   public:
     AwfulGlobal() {
-      util::FilePiece uni("1");
+/*      util::FilePiece uni("1");
       std::vector<uint64_t> number;
       ReadARPACounts(uni, number);
       assert(number.size() == 1);
@@ -155,13 +155,13 @@ class AwfulGlobal {
 
       models_[0] = new ProbingModel("2");
       models_[1] = new ProbingModel("3");
-      models_[2] = new ProbingModel("4");
+      models_[2] = new ProbingModel("4");*/
     }
 
     ~AwfulGlobal() {
-      delete models_[0];
+/*      delete models_[0];
       delete models_[1];
-      delete models_[2];
+      delete models_[2];*/
     }
 
     float GetRest(const WordIndex *vocab_ids, unsigned int n) {
@@ -323,9 +323,9 @@ template <class MiddleT, class LongestT> uint8_t *TemplateHashedSearch<MiddleT, 
   return start;
 }
 
-void UnigramRight(const ProbBackoff *, std::size_t) {}
+void UnigramRight(const ProbBackoff *, std::size_t, WordIndex) {}
 
-void UnigramRight(Rest *unigram, std::size_t size) {
+void UnigramRight(Rest *unigram, std::size_t size, WordIndex end_sentence) {
   double sum_double = 0.0;
   for (const Rest *i = unigram; i != unigram + size; ++i) {
     sum_double += pow(10.0, static_cast<double>(i->prob)) * static_cast<double>(i->prob - i->left);
@@ -334,6 +334,8 @@ void UnigramRight(Rest *unigram, std::size_t size) {
   for (Rest *i = unigram; i != unigram + size; ++i) {
     i->right = pow(10.0, i->backoff) * (i->backoff + sum);
   }
+  // Nothing follows </s>.  
+  unigram[end_sentence].right = 0.0;
 }
 
 template <class MiddleT, class LongestT> template <class Voc> void TemplateHashedSearch<MiddleT, LongestT>::InitializeFromARPA(const char * /*file*/, util::FilePiece &f, const std::vector<uint64_t> &counts, const Config &config, Voc &vocab, Backing &backing) {
@@ -345,7 +347,7 @@ template <class MiddleT, class LongestT> template <class Voc> void TemplateHashe
   Read1Grams(f, counts[0], vocab, unigram.Raw(), warn);
   CheckSpecials(config, vocab);
   awful.ApplyUnigram(unigram.Raw());
-  UnigramRight(unigram.Raw(), counts[0] + 1 - vocab.SawUnk());
+  UnigramRight(unigram.Raw(), counts[0] + 1 - vocab.SawUnk(), vocab.EndSentence());
 
   try {
     if (counts.size() > 2) {

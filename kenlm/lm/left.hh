@@ -120,6 +120,7 @@ template <class M> class RuleScore {
     explicit RuleScore(const M &model, ChartState &out) : model_(model), out_(out), left_done_(false), prob_(0.0) {
       out.left.length = 0;
       out.right.length = 0;
+      out.right.right_rest = 0.0;
     }
 
     void BeginSentence() {
@@ -145,20 +146,19 @@ template <class M> class RuleScore {
 
     // Faster version of NonTerminal for the case where the rule begins with a non-terminal.  
     void BeginNonTerminal(const ChartState &in, float prob) {
-      prob_ = prob;
+      prob_ = prob - in.right.right_rest;
       out_ = in;
       left_done_ = in.full;
     }
 
     void NonTerminal(const ChartState &in, float prob) {
-      prob_ += prob;
+      prob_ += prob - in.right.right_rest;
       
       if (!in.left.length) {
-        if (in.full) {
-          for (const float *i = out_.right.backoff; i < out_.right.backoff + out_.right.length; ++i) prob_ += *i;
-          left_done_ = true;
-          out_.right = in.right;
-        }
+        assert(in.full);
+        for (const float *i = out_.right.backoff; i < out_.right.backoff + out_.right.length; ++i) prob_ += *i;
+        left_done_ = true;
+        out_.right = in.right;
         return;
       }
 
@@ -218,7 +218,7 @@ template <class M> class RuleScore {
     float Finish() {
       // A N-1-gram might extend left and right but we should still set full to true because it's an N-1-gram.  
       out_.full = left_done_ || (out_.left.length == model_.Order() - 1);
-      return prob_;
+      return prob_ + out_.right.right_rest;
     }
 
   private:
@@ -228,7 +228,8 @@ template <class M> class RuleScore {
             back_in, // Backoffs to use
             in.left.pointers[extend_length - 1], extend_length, // Words to be extended
             back_out, // Backoffs for the next score
-            next_use)); // Length of n-gram to use in next scoring.  
+            next_use,  // Length of n-gram to use in next scoring.  
+            out_.right.right_rest));
       if (next_use != out_.right.length) {
         left_done_ = true;
         if (!next_use) {

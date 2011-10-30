@@ -74,7 +74,7 @@ template <class MiddleT, class LongestT> class TemplateHashedSearch {
 
     Unigram unigram;
 
-    void LookupUnigram(WordIndex word, float &backoff, Node &next, FullScoreReturn &ret) const {
+    void LookupUnigram(WordIndex word, float &backoff, Node &next, FullScoreReturn &ret, float &right_rest) const {
       const LowerValue &entry = unigram.Lookup(word);
       util::FloatEnc val;
       val.f = entry.prob;
@@ -82,7 +82,7 @@ template <class MiddleT, class LongestT> class TemplateHashedSearch {
       ret.extend_left = static_cast<uint64_t>(word);
       val.i |= util::kSignBit;
       ret.prob = val.f;
-      GetRest(entry, ret.prob, ret.left_rest, ret.right_rest);
+      GetRest(entry, ret.prob, ret.left_rest, right_rest);
       backoff = entry.backoff;
       next = static_cast<Node>(word);
     }
@@ -112,7 +112,7 @@ template <class MiddleT, class LongestT> class TemplateHashedSearch {
     const Middle *MiddleBegin() const { return &*middle_.begin(); }
     const Middle *MiddleEnd() const { return &*middle_.end(); }
 
-    Node Unpack(uint64_t extend_pointer, unsigned char extend_length, float &prob, float &rest) const {
+    Node Unpack(uint64_t extend_pointer, unsigned char extend_length, FullScoreReturn &ret, float &right_rest) const {
       const LowerValue *lower;
       if (extend_length == 1) {
         lower = &unigram.Lookup(static_cast<uint64_t>(extend_pointer));
@@ -127,15 +127,13 @@ template <class MiddleT, class LongestT> class TemplateHashedSearch {
       util::FloatEnc val;
       val.f = lower->prob;
       val.i |= util::kSignBit;
-      prob = val.f;
+      ret.prob = val.f;
 
-      float TODOfixme;
-      GetRest(*lower, prob, rest, TODOfixme);
-//      LogRest(extend_length, prob, *lower);
+      GetRest(*lower, ret.prob, ret.left_rest, right_rest);
       return extend_pointer;
     }
 
-    bool LookupMiddle(const Middle &middle, WordIndex word, float &backoff, Node &node, FullScoreReturn &ret) const {
+    bool LookupMiddle(const Middle &middle, WordIndex word, float &backoff, Node &node, FullScoreReturn &ret, float &right_rest) const {
       node = CombineWordHash(node, word);
       typename Middle::ConstIterator found;
       if (!middle.Find(node, found)) return false;
@@ -145,7 +143,7 @@ template <class MiddleT, class LongestT> class TemplateHashedSearch {
       ret.extend_left = node;
       enc.i |= util::kSignBit;
       ret.prob = enc.f;
-      GetRest(found->GetValue(), ret.prob, ret.left_rest, ret.right_rest);
+      GetRest(found->GetValue(), ret.prob, ret.left_rest, right_rest);
       backoff = found->GetValue().backoff;
       return true;
     }

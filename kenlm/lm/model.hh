@@ -58,6 +58,7 @@ class State {
     // This order minimizes total size of the struct if WordIndex is 64 bit, float is 32 bit, and alignment of 64 bit integers is 64 bit.  
     WordIndex words[kMaxOrder - 1];
     float backoff[kMaxOrder - 1];
+    float right_rest;
     unsigned char length;
 };
 
@@ -134,7 +135,8 @@ template <class Search, class VocabularyT> class GenericModel : public base::Mod
         // Where to write additional backoffs for [extend_length + 1, min(Order() - 1, return.ngram_length)]
         float *backoff_out,
         // Amount of additional content that should be considered by the next call.
-        unsigned char &next_use) const;
+        unsigned char &next_use,
+        float &right_rest) const;
 
     float UnRest(uint64_t extend_pointer, unsigned char extend_length) const;
 
