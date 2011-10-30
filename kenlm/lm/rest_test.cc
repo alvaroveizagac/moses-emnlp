@@ -34,9 +34,10 @@ void Check(const RestProbingModel &model, const std::vector<float> &lefts, Strin
   RestProbingModel::State ignored;
   for (WordIndex i = 0; i < 34; ++i) {
     float prob = model.FullScore(cont, i, ignored).prob;
-    sum += pow(10.0, prob) * (prob - lefts[i]);
+    sum += pow(10.0, lefts[i]) * (prob - lefts[i]);
   }
-  BOOST_CHECK_CLOSE(sum, orig.right_rest, 0.0001);
+  if (indices.front() == model.GetVocabulary().EndSentence()) sum = 0.0;
+  BOOST_CHECK_CLOSE(sum, cont.right_rest, 0.0001);
   std::cerr << "Checked " << str << " at " << sum << std::endl;
 }
 
