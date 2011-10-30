@@ -36,7 +36,7 @@ struct Message {
   void SetTo(Rest &in_to) { to = &in_to; }
 
   void Apply() {
-    to->right += pow(10.0, to->backoff) * *from;
+    to->right += *from;
   }
 };
 
@@ -84,7 +84,7 @@ template <class Middle> void AdjustLower(const WordIndex *vocab_ids, const unsig
   float shift = -fabsf(i->GetValue().prob);
   float unigram_left = unigram[*vocab_ids].left;
 
-  to.right += powf(10.0, higher) * (higher - unigram_left) - powf(10.0, to.backoff + shift) * (to.backoff + shift - unigram_left);
+  to.right += powf(10.0, unigram_left) * (higher - to.backoff - shift);
 }
 
 template <class Middle> void AdjustLower(const WordIndex *, const unsigned int, const ProbBackoff *, const Middle &, float, ProbBackoff &) {}
@@ -93,8 +93,7 @@ void AdjustLower(const WordIndex *vocab_ids, const Rest *unigram, float higher, 
   const Rest &basis = unigram[*vocab_ids];
   float unigram_left = basis.left;
   float shift = -fabsf(basis.prob);
-  float add = powf(10.0, higher) * (higher - unigram_left) - powf(10.0, to.backoff + shift) * (to.backoff + shift - unigram_left);
-  to.right += add;
+  to.right += powf(10.0, unigram_left) * (higher - to.backoff - shift);
 }
 void AdjustLower(const WordIndex *, const ProbBackoff *, float, ProbBackoff &) {}
 
@@ -138,7 +137,7 @@ template <class LowerValue> class ActivateUnigram {
 class AwfulGlobal {
   public:
     AwfulGlobal() {
-/*      util::FilePiece uni("1");
+      util::FilePiece uni("1");
       std::vector<uint64_t> number;
       ReadARPACounts(uni, number);
       assert(number.size() == 1);
@@ -155,13 +154,13 @@ class AwfulGlobal {
 
       models_[0] = new ProbingModel("2");
       models_[1] = new ProbingModel("3");
-      models_[2] = new ProbingModel("4");*/
+      models_[2] = new ProbingModel("4");
     }
 
     ~AwfulGlobal() {
-/*      delete models_[0];
+      delete models_[0];
       delete models_[1];
-      delete models_[2];*/
+      delete models_[2];
     }
 
     float GetRest(const WordIndex *vocab_ids, unsigned int n) {
@@ -190,7 +189,7 @@ AwfulGlobal awful;
 
 void SetRest(const WordIndex *vocab_ids, unsigned int n, Rest &weights) {
   weights.left = awful.GetRest(vocab_ids, n);
-  weights.right = powf(10.0, weights.backoff) * weights.backoff;
+  weights.right = weights.backoff;
 }
 
 void SetRest(const WordIndex *, unsigned int, ProbBackoff &) {}
