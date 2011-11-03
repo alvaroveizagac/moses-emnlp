@@ -30,7 +30,7 @@ class AwfulGlobal {
 
   private:
     std::vector<ProbBackoff> unigram_;
-    const ProbingModel *models_[3];
+    const TrieModel *models_[3];
 };
 
 extern AwfulGlobal awful;
