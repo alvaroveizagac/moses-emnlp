@@ -450,6 +450,7 @@ void PopulateUnigramWeights(FILE *file, WordIndex unigram_count, RecordReader &c
     rewind(file);
     for (WordIndex i = 0; i < unigram_count; ++i) {
       ReadOrThrow(file, &unigrams[i].weights, sizeof(ProbBackoff));
+      unigrams[i].weights.rest = awful.GetRest(&i, 1);
       if (contexts && *reinterpret_cast<const WordIndex*>(contexts.Data()) == i) {
         SetExtension(unigrams[i].weights.backoff);
         ++contexts;

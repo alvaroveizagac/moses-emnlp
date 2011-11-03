@@ -19,7 +19,7 @@ struct NodeRange {
 
 // TODO: if the number of unigrams is a concern, also bit pack these records.  
 struct UnigramValue {
-  ProbBackoff weights;
+  Rest weights;
   uint64_t next;
   uint64_t Next() const { return next; }
 };
@@ -37,9 +37,9 @@ class Unigram {
       return (count + 2) * sizeof(UnigramValue);
     }
     
-    const ProbBackoff &Lookup(WordIndex index) const { return unigram_[index].weights; }
+    const Rest &Lookup(WordIndex index) const { return unigram_[index].weights; }
     
-    ProbBackoff &Unknown() { return unigram_[0].weights; }
+    Rest &Unknown() { return unigram_[0].weights; }
 
     UnigramValue *Raw() {
       return unigram_;
@@ -47,10 +47,11 @@ class Unigram {
     
     void LoadedBinary() {}
 
-    void Find(WordIndex word, float &prob, float &backoff, NodeRange &next) const {
+    void Find(WordIndex word, float &prob, float &backoff, float &rest, NodeRange &next) const {
       UnigramValue *val = unigram_ + word;
       prob = val->weights.prob;
       backoff = val->weights.backoff;
+      rest = val->weights.rest;
       next.begin = val->next;
       next.end = (val+1)->next;
     }

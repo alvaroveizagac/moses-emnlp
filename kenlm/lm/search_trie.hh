@@ -66,7 +66,7 @@ template <class Quant, class Bhiksha> class TrieSearch {
     void InitializeFromARPA(const char *file, util::FilePiece &f, std::vector<uint64_t> &counts, const Config &config, SortedVocabulary &vocab, Backing &backing);
 
     void LookupUnigram(WordIndex word, float &backoff, Node &node, FullScoreReturn &ret) const {
-      unigram.Find(word, ret.prob, backoff, node);
+      unigram.Find(word, ret.prob, backoff, ret.rest, node);
       ret.independent_left = (node.begin == node.end);
       ret.extend_left = static_cast<uint64_t>(word);
     }
@@ -101,8 +101,7 @@ template <class Quant, class Bhiksha> class TrieSearch {
       if (extend_length == 1) {
         float ignored;
         Node ret;
-        unigram.Find(static_cast<WordIndex>(extend_pointer), prob, ignored, ret);
-        rest = prob;
+        unigram.Find(static_cast<WordIndex>(extend_pointer), prob, ignored, rest, ret);
         return ret;
       }
       Node ret = middle_begin_[extend_length - 2].ReadEntry(extend_pointer, prob);

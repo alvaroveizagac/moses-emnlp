@@ -44,7 +44,7 @@ class DontQuantize {
       void ReadBackoff(const void *base, uint64_t bit_offset, float &backoff) const {
         backoff = util::ReadFloat32(base, bit_offset + 31);
       }
-      uint8_t TotalBits() const { return 63; }
+      uint8_t TotalBits() const { return 63 + 31; }
     };
 
     struct Longest {
