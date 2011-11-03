@@ -1,6 +1,7 @@
 /* This is where the trie is built.  It's on-disk.  */
 #include "lm/search_trie.hh"
 
+#include "lm/awful.hh"
 #include "lm/bhiksha.hh"
 #include "lm/binary_format.hh"
 #include "lm/blank.hh"
@@ -284,7 +285,7 @@ template <class Quant, class Bhiksha> class WriteEntries {
 
     void MiddleBlank(const unsigned char order, const WordIndex *indices, unsigned char /*lower*/, float /*prob_base*/) {
       ProbBackoff weights = sri_.GetBlank(order_, order, indices);
-      middle_[order - 2].Insert(indices[order - 1], weights.prob, weights.backoff);
+      middle_[order - 2].Insert(indices[order - 1], weights.prob, weights.backoff, awful.GetRest(indices, order));
     }
 
     void Middle(const unsigned char order, const void *data) {
@@ -295,7 +296,7 @@ template <class Quant, class Bhiksha> class WriteEntries {
         SetExtension(weights.backoff);
         ++context;
       }
-      middle_[order - 2].Insert(words[order - 1], weights.prob, weights.backoff);
+      middle_[order - 2].Insert(words[order - 1], weights.prob, weights.backoff, awful.GetRest(words, order));
     }
 
     void Longest(const void *data) {
@@ -421,13 +422,15 @@ template <class Quant> void TrainQuantizer(uint8_t order, uint64_t count, const 
   std::vector<float> probs(additional), backoffs;
   probs.reserve(count + additional.size());
   backoffs.reserve(count);
+  std::vector<float> rests;
   for (reader.Rewind(); reader; ++reader) {
     const ProbBackoff &weights = *reinterpret_cast<const ProbBackoff*>(reinterpret_cast<const uint8_t*>(reader.Data()) + sizeof(WordIndex) * order);
     probs.push_back(weights.prob);
     if (weights.backoff != 0.0) backoffs.push_back(weights.backoff);
+    rests.push_back(awful.GetRest(reinterpret_cast<const WordIndex*>(reader.Data()), order));
     ++progress;
   }
-  quant.Train(order, probs, backoffs);
+  quant.Train(order, probs, backoffs, rests);
 }
 
 template <class Quant> void TrainProbQuantizer(uint8_t order, uint64_t count, RecordReader &reader, util::ErsatzProgress &progress, Quant &quant) {

@@ -41,10 +41,10 @@ const char kSeparatelyQuantizeVersion = 2;
 
 void SeparatelyQuantize::UpdateConfigFromBinary(int fd, const std::vector<uint64_t> &/*counts*/, Config &config) {
   char version;
-  if (read(fd, &version, 1) != 1 || read(fd, &config.prob_bits, 1) != 1 || read(fd, &config.backoff_bits, 1) != 1) 
+  if (read(fd, &version, 1) != 1 || read(fd, &config.prob_bits, 1) != 1 || read(fd, &config.backoff_bits, 1) != 1 || read(fd, &config.rest_bits, 1) != 1) 
     UTIL_THROW(util::ErrnoException, "Failed to read header for quantization.");
   if (version != kSeparatelyQuantizeVersion) UTIL_THROW(FormatLoadException, "This file has quantization version " << (unsigned)version << " but the code expects version " << (unsigned)kSeparatelyQuantizeVersion);
-  AdvanceOrThrow(fd, -3);
+  AdvanceOrThrow(fd, -4);
 }
 
 void SeparatelyQuantize::SetupMemory(void *start, const Config &config) {
@@ -52,6 +52,8 @@ void SeparatelyQuantize::SetupMemory(void *start, const Config &config) {
   start_ = reinterpret_cast<float*>(static_cast<uint8_t*>(start) + 8);
   prob_bits_ = config.prob_bits;
   backoff_bits_ = config.backoff_bits;
+  rest_bits_ = config.rest_bits;
+  // TODO: check rest.  
   // We need the reserved values.  
   if (config.prob_bits == 0) UTIL_THROW(ConfigException, "You can't quantize probability to zero");
   if (config.backoff_bits == 0) UTIL_THROW(ConfigException, "You can't quantize backoff to zero");
@@ -59,14 +61,15 @@ void SeparatelyQuantize::SetupMemory(void *start, const Config &config) {
   if (config.backoff_bits > 25) UTIL_THROW(ConfigException, "For efficiency reasons, quantizing backoff supports at most 25 bits.  Currently you have requested " << static_cast<unsigned>(config.backoff_bits) << " bits.");
 }
 
-void SeparatelyQuantize::Train(uint8_t order, std::vector<float> &prob, std::vector<float> &backoff) {
+void SeparatelyQuantize::Train(uint8_t order, std::vector<float> &prob, std::vector<float> &backoff, std::vector<float> &rest) {
   TrainProb(order, prob);
-
   // Backoff
   float *centers = start_ + TableStart(order) + ProbTableLength();
   *(centers++) = kNoExtensionBackoff;
   *(centers++) = kExtensionBackoff;
   MakeBins(&*backoff.begin(), &*backoff.end(), centers, (1ULL << backoff_bits_) - 2);
+  
+  MakeBins(&*rest.begin(), &*rest.end(), start_ + TableStart(order) + ProbTableLength() + BackoffTableLength(), (1ULL << rest_bits_));
 }
 
 void SeparatelyQuantize::TrainProb(uint8_t order, std::vector<float> &prob) {
@@ -79,6 +82,7 @@ void SeparatelyQuantize::FinishedLoading(const Config &config) {
   *(actual_base++) = kSeparatelyQuantizeVersion; // version
   *(actual_base++) = config.prob_bits;
   *(actual_base++) = config.backoff_bits;
+  *(actual_base++) = config.rest_bits;
 }
 
 } // namespace ngram

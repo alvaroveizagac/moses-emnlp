@@ -24,17 +24,19 @@ class DontQuantize {
     static const ModelType kModelTypeAdd = static_cast<ModelType>(0);
     static void UpdateConfigFromBinary(int, const std::vector<uint64_t> &, Config &) {}
     static std::size_t Size(uint8_t /*order*/, const Config &/*config*/) { return 0; }
-    static uint8_t MiddleBits(const Config &/*config*/) { return 63; }
+    static uint8_t MiddleBits(const Config &/*config*/) { return 63 + 31; }
     static uint8_t LongestBits(const Config &/*config*/) { return 31; }
 
     struct Middle {
-      void Write(void *base, uint64_t bit_offset, float prob, float backoff) const {
+      void Write(void *base, uint64_t bit_offset, float prob, float backoff, float rest) const {
         util::WriteNonPositiveFloat31(base, bit_offset, prob);
         util::WriteFloat32(base, bit_offset + 31, backoff);
+        util::WriteNonPositiveFloat31(base, bit_offset + 63, rest);
       }
-      void Read(const void *base, uint64_t bit_offset, float &prob, float &backoff) const {
+      void Read(const void *base, uint64_t bit_offset, float &prob, float &backoff, float &rest) const {
         prob = util::ReadNonPositiveFloat31(base, bit_offset);
         backoff = util::ReadFloat32(base, bit_offset + 31);
+        rest = util::ReadNonPositiveFloat31(base, bit_offset + 63);
       }
       void ReadProb(const void *base, uint64_t bit_offset, float &prob) const {
         prob = util::ReadNonPositiveFloat31(base, bit_offset);
@@ -61,7 +63,7 @@ class DontQuantize {
 
     static const bool kTrain = false;
     // These should never be called because kTrain is false.  
-    void Train(uint8_t /*order*/, std::vector<float> &/*prob*/, std::vector<float> &/*backoff*/) {}
+    void Train(uint8_t /*order*/, std::vector<float> &/*prob*/, std::vector<float> &/*backoff*/, std::vector<float> &/*rest*/) {}
     void TrainProb(uint8_t, std::vector<float> &/*prob*/) {}
 
     void FinishedLoading(const Config &) {}
@@ -79,7 +81,7 @@ class SeparatelyQuantize {
 
         Bins(uint8_t bits, const float *const begin) : begin_(begin), end_(begin_ + (1ULL << bits)), bits_(bits), mask_((1ULL << bits) - 1) {}
 
-        uint64_t EncodeProb(float value) const {
+        uint64_t EncodeNormal(float value) const {
           return Encode(value, 0);
         }
 
@@ -127,26 +129,30 @@ class SeparatelyQuantize {
 
     class Middle {
       public:
-        Middle(uint8_t prob_bits, const float *prob_begin, uint8_t backoff_bits, const float *backoff_begin) : 
-          total_bits_(prob_bits + backoff_bits), total_mask_((1ULL << total_bits_) - 1), prob_(prob_bits, prob_begin), backoff_(backoff_bits, backoff_begin) {}
+        Middle(uint8_t prob_bits, const float *prob_begin, uint8_t backoff_bits, const float *backoff_begin, uint8_t rest_bits, const float *rest_begin ) : 
+          // TODO: broken for total_bits_ > 57.  
+          total_bits_(prob_bits + backoff_bits + rest_bits), total_mask_(1ULL << total_bits_), prob_(prob_bits, prob_begin), backoff_(backoff_bits, backoff_begin), rest_(rest_bits, rest_begin) {
+            UTIL_THROW_IF(total_bits_ > 57, util::Exception, "Too many quantization bits");
+          }
 
-        void Write(void *base, uint64_t bit_offset, float prob, float backoff) const {
+        void Write(void *base, uint64_t bit_offset, float prob, float backoff, float rest) const {
           util::WriteInt57(base, bit_offset, total_bits_, 
-              (prob_.EncodeProb(prob) << backoff_.Bits()) | backoff_.EncodeBackoff(backoff));
+              (prob_.EncodeNormal(prob) << (backoff_.Bits() + rest_.Bits())) | backoff_.EncodeBackoff(backoff) << backoff_.Bits() | rest_.EncodeNormal(rest));
         }
 
         void ReadProb(const void *base, uint64_t bit_offset, float &prob) const {
-          prob = prob_.Decode(util::ReadInt25(base, bit_offset + backoff_.Bits(), prob_.Bits(), prob_.Mask()));
+          prob = prob_.Decode(util::ReadInt25(base, bit_offset + backoff_.Bits() + rest_.Bits(), prob_.Bits(), prob_.Mask()));
         }
 
-        void Read(const void *base, uint64_t bit_offset, float &prob, float &backoff) const {
+        void Read(const void *base, uint64_t bit_offset, float &prob, float &backoff, float &rest) const {
           uint64_t both = util::ReadInt57(base, bit_offset, total_bits_, total_mask_);
-          prob = prob_.Decode(both >> backoff_.Bits());
-          backoff = backoff_.Decode(both & backoff_.Mask());
+          prob = prob_.Decode(both >> (rest_.Bits() + backoff_.Bits()));
+          backoff = backoff_.Decode((both >> rest_.Bits()) & backoff_.Mask());
+          rest = rest_.Decode(both & rest_.Mask());
         }
 
         void ReadBackoff(const void *base, uint64_t bit_offset, float &backoff) const {
-          backoff = backoff_.Decode(util::ReadInt25(base, bit_offset, backoff_.Bits(), backoff_.Mask()));
+          backoff = backoff_.Decode(util::ReadInt25(base, bit_offset + rest_.Bits(), backoff_.Bits(), backoff_.Mask()));
         }
 
         uint8_t TotalBits() const {
@@ -158,6 +164,7 @@ class SeparatelyQuantize {
         const uint64_t total_mask_;
         const Bins prob_;
         const Bins backoff_;
+        const Bins rest_;
     };
 
     class Longest {
@@ -168,7 +175,7 @@ class SeparatelyQuantize {
         Longest(uint8_t prob_bits, const float *prob_begin) : prob_(prob_bits, prob_begin) {}
 
         void Write(void *base, uint64_t bit_offset, float prob) const {
-          util::WriteInt25(base, bit_offset, prob_.Bits(), prob_.EncodeProb(prob));
+          util::WriteInt25(base, bit_offset, prob_.Bits(), prob_.EncodeNormal(prob));
         }
 
         void Read(const void *base, uint64_t bit_offset, float &prob) const {
@@ -187,7 +194,7 @@ class SeparatelyQuantize {
 
     static const bool kTrain = true;
     // Assumes 0.0 is removed from backoff.  
-    void Train(uint8_t order, std::vector<float> &prob, std::vector<float> &backoff);
+    void Train(uint8_t order, std::vector<float> &prob, std::vector<float> &backoff, std::vector<float> &rest);
     // Train just probabilities (for longest order).
     void TrainProb(uint8_t order, std::vector<float> &prob);
 
@@ -195,17 +202,18 @@ class SeparatelyQuantize {
 
     Middle Mid(uint8_t order) const {
       const float *table = start_ + TableStart(order);
-      return Middle(prob_bits_, table, backoff_bits_, table + ProbTableLength());
+      return Middle(prob_bits_, table, backoff_bits_, table + ProbTableLength(), rest_bits_, table + ProbTableLength() + BackoffTableLength());
     }
 
     Longest Long(uint8_t order) const { return Longest(prob_bits_, start_ + TableStart(order)); }
 
   private:
-    size_t TableStart(uint8_t order) const { return ((1ULL << prob_bits_) + (1ULL << backoff_bits_)) * static_cast<uint64_t>(order - 2); }
+    size_t TableStart(uint8_t order) const { return ((1ULL << prob_bits_) + (1ULL << backoff_bits_) + (1ULL << rest_bits_)) * static_cast<uint64_t>(order - 2); }
     size_t ProbTableLength() const { return (1ULL << prob_bits_); }
+    size_t BackoffTableLength() const { return (1ULL << backoff_bits_); }
 
     float *start_;
-    uint8_t prob_bits_, backoff_bits_;
+    uint8_t prob_bits_, backoff_bits_, rest_bits_;
 };
 
 } // namespace ngram

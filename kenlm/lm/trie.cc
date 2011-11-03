@@ -72,13 +72,13 @@ template <class Quant, class Bhiksha> BitPackedMiddle<Quant, Bhiksha>::BitPacked
   BaseInit(reinterpret_cast<uint8_t*>(base) + Bhiksha::Size(entries + 1, max_next, config), max_vocab, quant.TotalBits() + bhiksha_.InlineBits());
 }
 
-template <class Quant, class Bhiksha> void BitPackedMiddle<Quant, Bhiksha>::Insert(WordIndex word, float prob, float backoff) {
+template <class Quant, class Bhiksha> void BitPackedMiddle<Quant, Bhiksha>::Insert(WordIndex word, float prob, float backoff, float rest) {
   assert(word <= word_mask_);
   uint64_t at_pointer = insert_index_ * total_bits_;
 
   util::WriteInt57(base_, at_pointer, word_bits_, word);
   at_pointer += word_bits_;
-  quant_.Write(base_, at_pointer, prob, backoff);
+  quant_.Write(base_, at_pointer, prob, backoff, rest);
   at_pointer += quant_.TotalBits();
   uint64_t next = next_source_->InsertIndex();
   bhiksha_.WriteNext(base_, at_pointer, insert_index_, next);
@@ -86,7 +86,7 @@ template <class Quant, class Bhiksha> void BitPackedMiddle<Quant, Bhiksha>::Inse
   ++insert_index_;
 }
 
-template <class Quant, class Bhiksha> bool BitPackedMiddle<Quant, Bhiksha>::Find(WordIndex word, float &prob, float &backoff, NodeRange &range, uint64_t &pointer) const {
+template <class Quant, class Bhiksha> bool BitPackedMiddle<Quant, Bhiksha>::Find(WordIndex word, float &prob, float &backoff, float &rest, NodeRange &range, uint64_t &pointer) const {
   uint64_t at_pointer;
   if (!FindBitPacked(base_, word_mask_, word_bits_, total_bits_, range.begin, range.end, max_vocab_, word, at_pointer)) {
     return false;
@@ -95,7 +95,7 @@ template <class Quant, class Bhiksha> bool BitPackedMiddle<Quant, Bhiksha>::Find
   at_pointer *= total_bits_;
   at_pointer += word_bits_;
 
-  quant_.Read(base_, at_pointer, prob, backoff);
+  quant_.Read(base_, at_pointer, prob, backoff, rest);
   at_pointer += quant_.TotalBits();
 
   bhiksha_.ReadNext(base_, at_pointer, pointer, total_bits_, range);

@@ -1,10 +1,9 @@
 #include "lm/search_hashed.hh"
 
+#include "lm/awful.hh"
 #include "lm/binary_format.hh"
 #include "lm/blank.hh"
 #include "lm/lm_exception.hh"
-// TODO: remove hack
-#include "lm/model.hh"
 #include "lm/read_arpa.hh"
 #include "lm/vocab.hh"
 
@@ -54,59 +53,9 @@ template <class LowerValue> class ActivateUnigram {
     LowerValue *modify_;
 };
 
-class AwfulGlobal {
-  public:
-    AwfulGlobal() {
-/*      util::FilePiece uni("1");
-      std::vector<uint64_t> number;
-      ReadARPACounts(uni, number);
-      assert(number.size() == 1);
-      unigram_.resize(number[0]);
-      ProbingVocabulary vocab;
-      std::vector<char> vocab_backing(ProbingVocabulary::Size(number[0] + 1, Config()));
-      vocab.SetupMemory(&vocab_backing.front(), ProbingVocabulary::Size(number[0] + 1, Config()), number[0] + 1, Config()); 
-      PositiveProbWarn warn;
-      Read1Grams(uni, (size_t)number[0], vocab, &*unigram_.begin(), warn);
-
-      models_[0] = new ProbingModel("2");
-      models_[1] = new ProbingModel("3");
-      models_[2] = new ProbingModel("4");*/
-    }
-
-    ~AwfulGlobal() {
-      delete models_[0];
-      delete models_[1];
-      delete models_[2];
-    }
-
-    float GetRest(const WordIndex *vocab_ids, unsigned int n) {
-      if (n == 1) {
-        return unigram_[vocab_ids[0]].prob;
-      } else {
-        State ignored;
-        return models_[n - 2]->FullScoreForgotState(vocab_ids + 1, vocab_ids + n, vocab_ids[0], ignored).prob;
-      }
-    }
-
-    void ApplyUnigram(Rest *weights) {
-      for (size_t i = 0; i < unigram_.size(); ++i) {
-        weights[i].rest = unigram_[i].prob;
-        std::cout << "1 " << -fabsf(weights[i].prob) << ' ' << weights[i].rest << '\n';
-      }
-      unigram_.clear();
-    }
-    void ApplyUnigram(ProbBackoff * /*weights */) {}
-
-  private:
-    std::vector<ProbBackoff> unigram_;
-    const ProbingModel *models_[3];
-};
-
-AwfulGlobal awful;
-
 void SetRest(const WordIndex *vocab_ids, unsigned int n, Rest &weights) {
   weights.rest = awful.GetRest(vocab_ids, n);
-  std::cout << n << ' ' << -fabsf(weights.prob) << ' ' << weights.rest << '\n';
+//  std::cout << n << ' ' << -fabsf(weights.prob) << ' ' << weights.rest << '\n';
 }
 
 void SetRest(const WordIndex *, unsigned int, ProbBackoff &) {}

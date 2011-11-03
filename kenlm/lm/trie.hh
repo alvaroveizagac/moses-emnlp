@@ -88,13 +88,13 @@ template <class Quant, class Bhiksha> class BitPackedMiddle : public BitPacked {
     // next_source need not be initialized.  
     BitPackedMiddle(void *base, const Quant &quant, uint64_t entries, uint64_t max_vocab, uint64_t max_next, const BitPacked &next_source, const Config &config);
 
-    void Insert(WordIndex word, float prob, float backoff);
+    void Insert(WordIndex word, float prob, float backoff, float rest);
 
     void FinishedLoading(uint64_t next_end, const Config &config);
 
     void LoadedBinary() { bhiksha_.LoadedBinary(); }
 
-    bool Find(WordIndex word, float &prob, float &backoff, NodeRange &range, uint64_t &pointer) const;
+    bool Find(WordIndex word, float &prob, float &backoff, float &rest, NodeRange &range, uint64_t &pointer) const;
 
     bool FindNoProb(WordIndex word, float &backoff, NodeRange &range) const;
 

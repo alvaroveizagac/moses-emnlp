@@ -72,7 +72,7 @@ template <class Quant, class Bhiksha> class TrieSearch {
     }
 
     bool LookupMiddle(const Middle &mid, WordIndex word, float &backoff, Node &node, FullScoreReturn &ret) const {
-      if (!mid.Find(word, ret.prob, backoff, node, ret.extend_left)) return false;
+      if (!mid.Find(word, ret.prob, backoff, ret.rest, node, ret.extend_left)) return false;
       ret.independent_left = (node.begin == node.end);
       return true;
     }
