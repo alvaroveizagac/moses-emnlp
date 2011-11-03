@@ -24,6 +24,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 #include <iostream>
 #include <memory>
 #include <stdlib.h>
+#include <math.h>
 #include "lm/binary_format.hh"
 #include "lm/enumerate_vocab.hh"
 #include "lm/left.hh"
@@ -39,6 +40,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 #include "InputFileStream.h"
 #include "StaticData.h"
 #include "ChartHypothesis.h"
+#include "ChartManager.h"
 
 #include <boost/shared_ptr.hpp>
 
@@ -189,23 +191,31 @@ template <class Model> void LanguageModelKen<Model>::CalcScore(const Phrase &phr
   }
   
   size_t ngramBoundary = m_ngram->Order() - 1;
-
   for (; position < phrase.GetSize(); ++position) {
     const Word &word = phrase.GetWord(position);
     if (word.IsNonTerminal()) {
       *state0 = m_ngram->NullContextState();
+      ngramBoundary = m_ngram->Order() + position;
     } else {
       lm::WordIndex index = TranslateID(word);
-      float score = TransformLMScore(m_ngram->Score(*state0, index, *state1));
+      lm::FullScoreReturn ret(m_ngram->FullScore(*state0, index, *state1));
       std::swap(state0, state1);
-      if (position >= ngramBoundary) ngramScore += score;
-      fullScore += score;
+      if (position >= ngramBoundary) {
+        ngramScore += ret.prob;
+        fullScore += ret.prob;
+      } else {
+        fullScore += ret.left_rest;
+      }
       if (!index) ++oovCount;
     }
   }
+  fullScore = TransformLMScore(fullScore);
+  ngramScore = TransformLMScore(ngramScore);
 }
 
 template <class Model> FFState *LanguageModelKen<Model>::Evaluate(const Hypothesis &hypo, const FFState *ps, ScoreComponentCollection *out) const {
+  std::cerr << "Evaluate was called." << std::endl;
+  abort();
   const lm::ngram::State &in_state = static_cast<const KenLMState&>(*ps).state;
 
   std::auto_ptr<KenLMState> ret(new KenLMState());
@@ -312,7 +322,13 @@ template <class Model> FFState *LanguageModelKen<Model>::EvaluateChart(const Cha
     }
   }
 
-  accumulator->Assign(this, ruleScore.Finish());
+  float finished = ruleScore.Finish();
+  if ((hypo.GetCurrSourceRange().GetStartPos() == 0) && (hypo.GetCurrSourceRange().GetEndPos() >= hypo.GetManager().GetSource().GetSize() - 1)) {
+    const lm::ngram::ChartState &entry = newState->GetChartState();
+    finished -= lm::ngram::StateAdjust(*m_ngram, entry);
+  }
+
+  accumulator->Assign(this, finished);
   return newState;
 }
 
