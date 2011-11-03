@@ -32,7 +32,6 @@ class DontQuantize {
         util::WriteNonPositiveFloat31(base, bit_offset, prob);
         util::WriteFloat32(base, bit_offset + 31, backoff);
         util::WriteNonPositiveFloat31(base, bit_offset + 63, rest);
-        if (bit_offset == 5976563073) std::cerr << "Writing Prob " << prob << " Backoff " << backoff << " Rest " << rest << std::endl;
       }
       void Read(const void *base, uint64_t bit_offset, float &prob, float &backoff, float &rest) const {
         prob = util::ReadNonPositiveFloat31(base, bit_offset);
