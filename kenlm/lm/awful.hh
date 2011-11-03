@@ -6,6 +6,7 @@
 #include "lm/weights.hh"
 
 #include <vector>
+#include <math.h>
 
 namespace lm {
 namespace ngram {
@@ -19,6 +20,7 @@ template <class M> class AwfulGlobal {
     void Load();
 
     float GetRest(const WordIndex *vocab_ids, unsigned int n) {
+      if (loading_) return NAN;
       if (n == 1) {
         return unigram_[vocab_ids[0]].prob;
       } else {
@@ -33,6 +35,8 @@ template <class M> class AwfulGlobal {
   private:
     std::vector<ProbBackoff> unigram_;
     const M *models_[3];
+
+    bool loading_;
 };
 
 // Prevent hashed from using trie's models
