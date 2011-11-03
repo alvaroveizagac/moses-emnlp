@@ -6,30 +6,37 @@
 namespace lm {
 namespace ngram {
 
-AwfulGlobal::AwfulGlobal() {
+template <class M> AwfulGlobal<M>::AwfulGlobal() {
+  models_[0] = NULL;
+  models_[1] = NULL;
+  models_[2] = NULL;
+}
+
+template <class M> void AwfulGlobal<M>::Load() {
   util::FilePiece uni("1");
   std::vector<uint64_t> number;
   ReadARPACounts(uni, number);
   assert(number.size() == 1);
   unigram_.resize(number[0]);
-  SortedVocabulary vocab;
-  std::vector<char> vocab_backing(SortedVocabulary::Size(number[0] + 1, Config()));
-  vocab.SetupMemory(&vocab_backing.front(), SortedVocabulary::Size(number[0] + 1, Config()), number[0] + 1, Config()); 
+  typedef typename M::Vocabulary Vocab;
+  Vocab vocab;
+  std::vector<char> vocab_backing(Vocab::Size(number[0] + 1, Config()));
+  vocab.SetupMemory(&vocab_backing.front(), Vocab::Size(number[0] + 1, Config()), number[0] + 1, Config()); 
   PositiveProbWarn warn;
   Read1Grams(uni, (size_t)number[0], vocab, &*unigram_.begin(), warn);
 
-  models_[0] = new TrieModel("2");
-  models_[1] = new TrieModel("3");
-  models_[2] = new TrieModel("4");
+  models_[0] = new M("2");
+  models_[1] = new M("3");
+  models_[2] = new M("4");
 }
 
-AwfulGlobal::~AwfulGlobal() {
+template <class M> AwfulGlobal<M>::~AwfulGlobal() {
   delete models_[0];
   delete models_[1];
   delete models_[2];
 }
 
-void AwfulGlobal::ApplyUnigram(Rest *weights) {
+template <class M> void AwfulGlobal<M>::ApplyUnigram(Rest *weights) {
   for (size_t i = 0; i < unigram_.size(); ++i) {
     weights[i].rest = unigram_[i].prob;
     std::cout << "1 " << -fabsf(weights[i].prob) << ' ' << weights[i].rest << '\n';
@@ -37,7 +44,11 @@ void AwfulGlobal::ApplyUnigram(Rest *weights) {
   unigram_.clear();
 }
 
-AwfulGlobal awful;
+AwfulGlobal<TrieModel> trie_awful;
+AwfulGlobal<ProbingModel> probing_awful;
+
+template class AwfulGlobal<TrieModel>;
+template class AwfulGlobal<ProbingModel>;
 
 } // namespace ngram
 } // namespace lm

@@ -54,7 +54,7 @@ template <class LowerValue> class ActivateUnigram {
 };
 
 void SetRest(const WordIndex *vocab_ids, unsigned int n, Rest &weights) {
-  weights.rest = awful.GetRest(vocab_ids, n);
+  weights.rest = probing_awful.GetRest(vocab_ids, n);
 //  std::cout << n << ' ' << -fabsf(weights.prob) << ' ' << weights.rest << '\n';
 }
 
@@ -162,13 +162,14 @@ template <class MiddleT, class LongestT> uint8_t *TemplateHashedSearch<MiddleT, 
 }
 
 template <class MiddleT, class LongestT> template <class Voc> void TemplateHashedSearch<MiddleT, LongestT>::InitializeFromARPA(const char * /*file*/, util::FilePiece &f, const std::vector<uint64_t> &counts, const Config &config, Voc &vocab, Backing &backing) {
+  probing_awful.Load();
   // TODO: fix sorted.
   SetupMemory(GrowForSearch(config, 0, Size(counts, config), backing), counts, config);
 
   PositiveProbWarn warn(config.positive_log_probability);
 
   Read1Grams(f, counts[0], vocab, unigram.Raw(), warn);
-  awful.ApplyUnigram(unigram.Raw());
+  probing_awful.ApplyUnigram(unigram.Raw());
 
   CheckSpecials(config, vocab);
 

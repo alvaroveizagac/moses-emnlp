@@ -285,7 +285,7 @@ template <class Quant, class Bhiksha> class WriteEntries {
 
     void MiddleBlank(const unsigned char order, const WordIndex *indices, unsigned char /*lower*/, float /*prob_base*/) {
       ProbBackoff weights = sri_.GetBlank(order_, order, indices);
-      middle_[order - 2].Insert(indices[order - 1], weights.prob, weights.backoff, awful.GetRest(indices, order));
+      middle_[order - 2].Insert(indices[order - 1], weights.prob, weights.backoff, trie_awful.GetRest(indices, order));
     }
 
     void Middle(const unsigned char order, const void *data) {
@@ -296,7 +296,7 @@ template <class Quant, class Bhiksha> class WriteEntries {
         SetExtension(weights.backoff);
         ++context;
       }
-      middle_[order - 2].Insert(words[order - 1], weights.prob, weights.backoff, awful.GetRest(words, order));
+      middle_[order - 2].Insert(words[order - 1], weights.prob, weights.backoff, trie_awful.GetRest(words, order));
     }
 
     void Longest(const void *data) {
@@ -427,7 +427,7 @@ template <class Quant> void TrainQuantizer(uint8_t order, uint64_t count, const 
     const ProbBackoff &weights = *reinterpret_cast<const ProbBackoff*>(reinterpret_cast<const uint8_t*>(reader.Data()) + sizeof(WordIndex) * order);
     probs.push_back(weights.prob);
     if (weights.backoff != 0.0) backoffs.push_back(weights.backoff);
-    rests.push_back(awful.GetRest(reinterpret_cast<const WordIndex*>(reader.Data()), order));
+    rests.push_back(trie_awful.GetRest(reinterpret_cast<const WordIndex*>(reader.Data()), order));
     ++progress;
   }
   quant.Train(order, probs, backoffs, rests);
@@ -450,7 +450,7 @@ void PopulateUnigramWeights(FILE *file, WordIndex unigram_count, RecordReader &c
     rewind(file);
     for (WordIndex i = 0; i < unigram_count; ++i) {
       ReadOrThrow(file, &unigrams[i].weights, sizeof(ProbBackoff));
-      unigrams[i].weights.rest = awful.GetRest(&i, 1);
+      unigrams[i].weights.rest = trie_awful.GetRest(&i, 1);
       if (contexts && *reinterpret_cast<const WordIndex*>(contexts.Data()) == i) {
         SetExtension(unigrams[i].weights.backoff);
         ++contexts;
@@ -599,6 +599,7 @@ bool IsDirectory(const char *path) {
 } // namespace
 
 template <class Quant, class Bhiksha> void TrieSearch<Quant, Bhiksha>::InitializeFromARPA(const char *file, util::FilePiece &f, std::vector<uint64_t> &counts, const Config &config, SortedVocabulary &vocab, Backing &backing) {
+  trie_awful.Load();
   std::string temporary_directory;
   if (config.temporary_directory_prefix) {
     temporary_directory = config.temporary_directory_prefix;

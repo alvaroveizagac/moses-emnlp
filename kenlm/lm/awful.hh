@@ -10,11 +10,13 @@
 namespace lm {
 namespace ngram {
 
-class AwfulGlobal {
+template <class M> class AwfulGlobal {
   public:
     AwfulGlobal();
 
     ~AwfulGlobal();
+
+    void Load();
 
     float GetRest(const WordIndex *vocab_ids, unsigned int n) {
       if (n == 1) {
@@ -30,10 +32,12 @@ class AwfulGlobal {
 
   private:
     std::vector<ProbBackoff> unigram_;
-    const TrieModel *models_[3];
+    const M *models_[3];
 };
 
-extern AwfulGlobal awful;
+// Prevent hashed from using trie's models
+extern AwfulGlobal<TrieModel> trie_awful;
+extern AwfulGlobal<ProbingModel> probing_awful;
 
 } // namespace ngram
 } // namespace lm
