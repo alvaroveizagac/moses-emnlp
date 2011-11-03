@@ -359,6 +359,7 @@ template <class Doing> class BlankManager {
         // Mark that the probability is a blank so it shouldn't be used as the basis for a later n-gram.  
         basis_[blank - 1] = kBadProb;
       }
+      *pre = *cur;
       been_length_ = length;
     }
 

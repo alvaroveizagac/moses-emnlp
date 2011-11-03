@@ -21,12 +21,15 @@ template <class M> class AwfulGlobal {
 
     float GetRest(const WordIndex *vocab_ids, unsigned int n) {
       if (loading_) return NAN;
+      float ret;
       if (n == 1) {
-        return unigram_[vocab_ids[0]].prob;
+        ret = unigram_[vocab_ids[0]].prob;
       } else {
         State ignored;
-        return models_[n - 2]->FullScoreForgotState(vocab_ids + 1, vocab_ids + n, vocab_ids[0], ignored).prob;
+        ret = models_[n - 2]->FullScoreForgotState(vocab_ids + 1, vocab_ids + n, vocab_ids[0], ignored).prob;
       }
+      assert(!isnan(ret));
+      return ret;
     }
 
     void ApplyUnigram(Rest *weights);

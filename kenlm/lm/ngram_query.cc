@@ -16,7 +16,7 @@ float FloatSec(const struct timeval &tv) {
 }
 
 void PrintUsage(const char *message) {
-  struct rusage usage;
+/*  struct rusage usage;
   if (getrusage(RUSAGE_SELF, &usage)) {
     perror("getrusage");
     return;
@@ -32,7 +32,7 @@ void PrintUsage(const char *message) {
       std::cerr << "rss " << (line.c_str() + 7) << '\n';
       break;
     }
-  }
+  }*/
 }
 
 template <class Model> void Query(const Model &model, bool sentence_context) {

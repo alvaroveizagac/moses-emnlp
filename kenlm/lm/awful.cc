@@ -14,6 +14,7 @@ template <class M> AwfulGlobal<M>::AwfulGlobal() {
 
 template <class M> void AwfulGlobal<M>::Load() {
   if (loading_) return;
+  loading_ = true;
   util::FilePiece uni("1");
   std::vector<uint64_t> number;
   ReadARPACounts(uni, number);
@@ -25,8 +26,6 @@ template <class M> void AwfulGlobal<M>::Load() {
   vocab.SetupMemory(&vocab_backing.front(), Vocab::Size(number[0] + 1, Config()), number[0] + 1, Config()); 
   PositiveProbWarn warn;
   Read1Grams(uni, (size_t)number[0], vocab, &*unigram_.begin(), warn);
-
-  loading_ = true;
 
   models_[0] = new M("2");
   models_[1] = new M("3");
