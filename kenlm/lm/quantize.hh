@@ -119,12 +119,15 @@ class SeparatelyQuantize {
 
     static std::size_t Size(uint8_t order, const Config &config) {
       size_t longest_table = (static_cast<size_t>(1) << static_cast<size_t>(config.prob_bits)) * sizeof(float);
-      size_t middle_table = (static_cast<size_t>(1) << static_cast<size_t>(config.backoff_bits)) * sizeof(float) + longest_table;
+      size_t middle_table = 
+        (static_cast<size_t>(1) << static_cast<size_t>(config.backoff_bits)) * sizeof(float) +
+        (static_cast<size_t>(1) << static_cast<size_t>(config.rest_bits)) * sizeof(float) +
+        longest_table;
       // unigrams are currently not quantized so no need for a table.  
       return (order - 2) * middle_table + longest_table + /* for the bit counts and alignment padding) */ 8;
     }
 
-    static uint8_t MiddleBits(const Config &config) { return config.prob_bits + config.backoff_bits; }
+    static uint8_t MiddleBits(const Config &config) { return config.prob_bits + config.backoff_bits + config.rest_bits; }
     static uint8_t LongestBits(const Config &config) { return config.prob_bits; }
 
     class Middle {
