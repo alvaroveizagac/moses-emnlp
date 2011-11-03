@@ -7,7 +7,7 @@ namespace lm {
 namespace ngram {
 
 AwfulGlobal::AwfulGlobal() {
-  util::FilePiece uni("1");
+/*  util::FilePiece uni("1");
   std::vector<uint64_t> number;
   ReadARPACounts(uni, number);
   assert(number.size() == 1);
@@ -20,13 +20,13 @@ AwfulGlobal::AwfulGlobal() {
 
   models_[0] = new ProbingModel("2");
   models_[1] = new ProbingModel("3");
-  models_[2] = new ProbingModel("4");
+  models_[2] = new ProbingModel("4");*/
 }
 
 AwfulGlobal::~AwfulGlobal() {
-  delete models_[0];
+/*  delete models_[0];
   delete models_[1];
-  delete models_[2];
+  delete models_[2];*/
 }
 
 void AwfulGlobal::ApplyUnigram(Rest *weights) {

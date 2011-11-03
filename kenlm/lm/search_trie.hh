@@ -104,8 +104,7 @@ template <class Quant, class Bhiksha> class TrieSearch {
         unigram.Find(static_cast<WordIndex>(extend_pointer), prob, ignored, rest, ret);
         return ret;
       }
-      Node ret = middle_begin_[extend_length - 2].ReadEntry(extend_pointer, prob);
-      rest = prob;
+      Node ret = middle_begin_[extend_length - 2].ReadEntry(extend_pointer, prob, rest);
       return ret;
     }
 
