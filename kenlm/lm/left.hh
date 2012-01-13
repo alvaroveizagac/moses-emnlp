@@ -115,6 +115,10 @@ inline size_t hash_value(const ChartState &state) {
   return util::MurmurHashNative(hashes, sizeof(size_t), state.full);
 }
 
+template <class M> float StateAdjust(const M &, const ChartState &) {
+  return 0.0;
+}
+
 template <class M> class RuleScore {
   public:
     explicit RuleScore(const M &model, ChartState &out) : model_(model), out_(out), left_done_(false), prob_(0.0) {

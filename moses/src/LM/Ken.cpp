@@ -204,7 +204,7 @@ template <class Model> void LanguageModelKen<Model>::CalcScore(const Phrase &phr
         ngramScore += ret.prob;
         fullScore += ret.prob;
       } else {
-        fullScore += ret.left_rest;
+        fullScore += ret.rest;
       }
       if (!index) ++oovCount;
     }
